@@ -4,51 +4,74 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>QR-генератор</title>
-<meta name="theme-color" content="#ece2cd">
+<meta name="theme-color" content="#ece2cd" id="meta-theme">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='108' fill='%23ece2cd'/%3E%3Ctext x='256' y='358' font-size='300' text-anchor='middle' font-family='Georgia' font-weight='700' fill='%238b2019'%3EQR%3C/text%3E%3C/svg%3E">
 <style>
+/* Переменные объявлены на :root (html) */
 :root{
   --paper:#ece2cd; --paper-d:#ddd0b2; --ink:#26201a; --ink-soft:#5a4a38;
   --seal:#8b2019; --gold:#9c7a2c; --frame:#3a2c1c; --card:rgba(58,44,28,.05);
   --ok:#4a7a3c;
+  color-scheme: light;
 }
-/* Исправление тёмной темы: применяем и к html, и к body */
-html.dark, body.dark{
+:root.dark{
   --paper:#1a1714; --paper-d:#24201a; --ink:#e8dfd0; --ink-soft:#a89880;
   --seal:#d4513f; --gold:#d4a94c; --frame:#4a3a28; --card:rgba(232,223,208,.05);
   --ok:#6a9c5a;
+  color-scheme: dark;
 }
+
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{
-  min-height:100%;width:100%;font-family:Georgia,serif;
-  color:var(--ink);background:var(--paper);
-  transition:background .3s,color .3s;padding:22px;
+
+/* Фон на html, чтобы не было светлых полос сверху/снизу */
+html {
+  min-height: 100%;
+  background: var(--paper);
+  transition: background .3s;
 }
+
+body{
+  min-height: 100vh;
+  min-height: 100dvh; /* для мобильных браузеров */
+  width: 100%;
+  font-family: Georgia, serif;
+  color: var(--ink);
+  background: var(--paper);
+  transition: background .3s, color .3s;
+  padding: 22px;
+}
+
 body::before{
   content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(ellipse 50% 40% at 20% 15%,rgba(180,140,80,.15),transparent 70%),
              radial-gradient(ellipse 55% 45% at 80% 85%,rgba(140,100,50,.12),transparent 70%);
 }
-html.dark body::before, body.dark::before{opacity:.3}
+:root.dark body::before{opacity:.3}
 
 .frame{position:fixed;inset:12px;border:1px solid var(--frame);opacity:.4;pointer-events:none;z-index:1}
 .frame::before{content:'';position:absolute;inset:4px;border:1px solid var(--frame);opacity:.5}
 .page{position:relative;z-index:10;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 2px}
 .hdr h1{font-family:Georgia,serif;font-size:clamp(24px,5vw,38px);font-weight:700;letter-spacing:.14em;color:var(--ink);text-shadow:3px 3px 0 rgba(139,32,25,.15);cursor:pointer;user-select:none}
 .hdr h1 .dot{color:var(--seal)}
 .hdr .controls{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
 .ctl-btn{background:var(--paper);border:1px solid var(--frame);border-radius:2px;padding:8px 14px;color:var(--ink);font-family:'Courier New',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:7px;box-shadow:2px 2px 0 rgba(58,44,28,.2);transition:all .1s}
 .ctl-btn:hover{background:var(--paper-d);transform:translate(-1px,-1px);box-shadow:3px 3px 0 rgba(58,44,28,.3)}
+
 .card{background:var(--paper);border:1px solid var(--frame);padding:22px;box-shadow:4px 4px 0 rgba(58,44,28,.22);position:relative}
 .card::before{content:'';position:absolute;inset:5px;border:1px solid var(--frame);pointer-events:none;opacity:.25}
 .card>*{position:relative;z-index:1}
+
 .tabs{display:flex;border:1px solid var(--frame);background:var(--card);margin-bottom:20px;overflow-x:auto}
 .tab{flex:1;min-width:0;padding:13px 6px;background:transparent;border:none;border-right:1px solid var(--frame);color:var(--ink-soft);font-family:'Courier New',monospace;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;transition:background .15s,color .15s}
 .tab:last-child{border-right:none}
 .tab.active{background:var(--paper-d);color:var(--seal);box-shadow:inset 0 -2px 0 var(--seal)}
+
 .section-title{font-family:'Courier New',monospace;font-size:11px;color:var(--ink);letter-spacing:.2em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid var(--frame);flex-wrap:wrap}
 .section-title .hint{font-size:9.5px;color:var(--ink-soft);font-weight:700;text-transform:none;letter-spacing:.05em}
+
 .field-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .field-row .lbl{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:.16em;text-transform:uppercase}
 textarea,input[type=text]{width:100%;padding:14px;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;font-family:Georgia,serif;font-size:15px;outline:none;resize:vertical;box-shadow:inset 2px 2px 0 rgba(58,44,28,.08);transition:box-shadow .15s}
@@ -71,13 +94,7 @@ textarea:focus,input:focus{box-shadow:inset 2px 2px 0 rgba(58,44,28,.08),0 0 0 2
 .file-info .meta .name{font-family:Georgia,serif;font-size:13px;font-weight:700;color:var(--ink)}
 .file-info .meta .size{color:var(--ink-soft);font-size:10.5px;margin-top:2px}
 
-/* Кнопка удаления файла */
-.btn-remove{
-  background:transparent;border:1px solid var(--seal);color:var(--seal);
-  padding:6px 10px;cursor:pointer;font-family:'Courier New',monospace;
-  font-size:10px;font-weight:700;text-transform:uppercase;
-  margin-left:auto;flex-shrink:0;transition:all .2s;border-radius:2px;
-}
+.btn-remove{background:transparent;border:1px solid var(--seal);color:var(--seal);padding:6px 10px;cursor:pointer;font-family:'Courier New',monospace;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:auto;flex-shrink:0;transition:all .2s;border-radius:2px}
 .btn-remove:hover{background:var(--seal);color:var(--paper)}
 
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
@@ -127,7 +144,7 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
 .warn-box{font-family:'Courier New',monospace;font-size:10.5px;color:var(--seal);background:rgba(139,32,25,.08);border:1px solid var(--seal);padding:9px 12px;margin-top:10px;line-height:1.4}
 
 @media(max-width:520px){
-  html,body{padding:16px}
+  body{padding:16px}
   .frame{inset:8px}
   .card{padding:16px}
   .hdr h1{font-size:22px;letter-spacing:.08em}
@@ -705,23 +722,21 @@ var qrcode = (function(){
   var hint       = document.getElementById('hint');
   var toastEl    = document.getElementById('toast');
   var themeBtn   = document.getElementById('theme-toggle');
+  var metaTheme  = document.getElementById('meta-theme');
 
   var mode = 'text';
   var payload = null;
   var fileName = 'qr-code';
 
-  /* ===== iOS детект ===== */
   function isIOS(){
     return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
-  /* ===== Универсальное скачивание ===== */
   function downloadBlob(blob, filename, mime){
     mime = mime || blob.type || 'application/octet-stream';
     var file = null;
     try { file = new File([blob], filename, { type: mime }); } catch(e){}
-
     if (file && isIOS() && navigator.canShare && navigator.canShare({ files: [file] })){
       navigator.share({ files: [file], title: filename }).catch(function(err){
         if (err && err.name !== 'AbortError') fallbackDownload(blob, filename);
@@ -746,18 +761,18 @@ var qrcode = (function(){
     }, 1500);
   }
 
-  /* ===== Тема (применяется к html для фона) ===== */
+  /* ===== Тема ===== */
   function applyTheme(t){
     document.documentElement.classList.toggle('dark', t === 'dark');
-    document.body.classList.toggle('dark', t === 'dark');
     themeBtn.textContent = t === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+    if (metaTheme) metaTheme.content = t === 'dark' ? '#1a1714' : '#ece2cd';
     try { localStorage.setItem(K_THEME, t); } catch(e){}
   }
   var saved = 'light';
   try { saved = localStorage.getItem(K_THEME) || 'light'; } catch(e){}
   applyTheme(saved);
   themeBtn.addEventListener('click', function(){
-    applyTheme(document.body.classList.contains('dark') ? 'light' : 'dark');
+    applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
   });
 
   var toastTimer = null;
@@ -824,7 +839,6 @@ var qrcode = (function(){
         '<div class="size">' + fmtSize(file.size) + ' · в QR ~' + fmtSize(bytes) + '</div>';
       box.appendChild(meta);
       
-      // Кнопка удаления файла
       var removeBtn = document.createElement('button');
       removeBtn.className = 'btn-remove';
       removeBtn.textContent = 'Удалить';
@@ -1075,7 +1089,6 @@ var qrcode = (function(){
     return { mime: mime, bytes: bytes, blob: new Blob([bytes], { type: mime }) };
   }
 
-  /* ===== Файл → Base64 ===== */
   bindDrop(b64DropLabel, b64FileInput, handleB64File);
 
   function handleB64File(file){
@@ -1107,7 +1120,6 @@ var qrcode = (function(){
         '<div class="size">' + fmtSize(file.size) + ' → ' + fmtSize(b64len) + ' base64 · ' + note + '</div>';
       box.appendChild(meta);
       
-      // Кнопка удаления файла
       var removeBtn = document.createElement('button');
       removeBtn.className = 'btn-remove';
       removeBtn.textContent = 'Удалить';
@@ -1149,7 +1161,6 @@ var qrcode = (function(){
     useInQr(text);
   });
 
-  /* ===== Base64 → Файл ===== */
   function cleanFilename(raw){
     var s = (raw || 'decoded').trim();
     s = s.replace(/\.[a-zA-Z0-9]{1,6}$/, '');
@@ -1353,4 +1364,4 @@ var qrcode = (function(){
 })();
 </script>
 </body>
-  </html>
+</html>
