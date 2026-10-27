@@ -7,7 +7,6 @@
 <meta name="theme-color" content="#ece2cd" id="meta-theme">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='108' fill='%23ece2cd'/%3E%3Ctext x='256' y='358' font-size='300' text-anchor='middle' font-family='Georgia' font-weight='700' fill='%238b2019'%3EQR%3C/text%3E%3C/svg%3E">
 <style>
-/* Переменные объявлены на :root (html) */
 :root{
   --paper:#ece2cd; --paper-d:#ddd0b2; --ink:#26201a; --ink-soft:#5a4a38;
   --seal:#8b2019; --gold:#9c7a2c; --frame:#3a2c1c; --card:rgba(58,44,28,.05);
@@ -20,58 +19,29 @@
   --ok:#6a9c5a;
   color-scheme: dark;
 }
-
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-
-/* Фон на html, чтобы не было светлых полос сверху/снизу */
-html {
-  min-height: 100%;
-  background: var(--paper);
-  transition: background .3s;
-}
-
-body{
-  min-height: 100vh;
-  min-height: 100dvh; /* для мобильных браузеров */
-  width: 100%;
-  font-family: Georgia, serif;
-  color: var(--ink);
-  background: var(--paper);
-  transition: background .3s, color .3s;
-  padding: 22px;
-}
-
-body::before{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse 50% 40% at 20% 15%,rgba(180,140,80,.15),transparent 70%),
-             radial-gradient(ellipse 55% 45% at 80% 85%,rgba(140,100,50,.12),transparent 70%);
-}
+html{min-height:100%;background:var(--paper);transition:background .3s}
+body{min-height:100vh;min-height:100dvh;width:100%;font-family:Georgia,serif;color:var(--ink);background:var(--paper);transition:background .3s,color .3s;padding:22px}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 50% 40% at 20% 15%,rgba(180,140,80,.15),transparent 70%),radial-gradient(ellipse 55% 45% at 80% 85%,rgba(140,100,50,.12),transparent 70%)}
 :root.dark body::before{opacity:.3}
-
 .frame{position:fixed;inset:12px;border:1px solid var(--frame);opacity:.4;pointer-events:none;z-index:1}
 .frame::before{content:'';position:absolute;inset:4px;border:1px solid var(--frame);opacity:.5}
 .page{position:relative;z-index:10;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 2px}
 .hdr h1{font-family:Georgia,serif;font-size:clamp(24px,5vw,38px);font-weight:700;letter-spacing:.14em;color:var(--ink);text-shadow:3px 3px 0 rgba(139,32,25,.15);cursor:pointer;user-select:none}
 .hdr h1 .dot{color:var(--seal)}
 .hdr .controls{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-
 .ctl-btn{background:var(--paper);border:1px solid var(--frame);border-radius:2px;padding:8px 14px;color:var(--ink);font-family:'Courier New',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:7px;box-shadow:2px 2px 0 rgba(58,44,28,.2);transition:all .1s}
 .ctl-btn:hover{background:var(--paper-d);transform:translate(-1px,-1px);box-shadow:3px 3px 0 rgba(58,44,28,.3)}
-
 .card{background:var(--paper);border:1px solid var(--frame);padding:22px;box-shadow:4px 4px 0 rgba(58,44,28,.22);position:relative}
 .card::before{content:'';position:absolute;inset:5px;border:1px solid var(--frame);pointer-events:none;opacity:.25}
 .card>*{position:relative;z-index:1}
-
 .tabs{display:flex;border:1px solid var(--frame);background:var(--card);margin-bottom:20px;overflow-x:auto}
 .tab{flex:1;min-width:0;padding:13px 6px;background:transparent;border:none;border-right:1px solid var(--frame);color:var(--ink-soft);font-family:'Courier New',monospace;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;transition:background .15s,color .15s}
 .tab:last-child{border-right:none}
 .tab.active{background:var(--paper-d);color:var(--seal);box-shadow:inset 0 -2px 0 var(--seal)}
-
 .section-title{font-family:'Courier New',monospace;font-size:11px;color:var(--ink);letter-spacing:.2em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid var(--frame);flex-wrap:wrap}
 .section-title .hint{font-size:9.5px;color:var(--ink-soft);font-weight:700;text-transform:none;letter-spacing:.05em}
-
 .field-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .field-row .lbl{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:.16em;text-transform:uppercase}
 textarea,input[type=text]{width:100%;padding:14px;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;font-family:Georgia,serif;font-size:15px;outline:none;resize:vertical;box-shadow:inset 2px 2px 0 rgba(58,44,28,.08);transition:box-shadow .15s}
@@ -79,13 +49,18 @@ textarea{min-height:110px;line-height:1.5}
 textarea:focus,input:focus{box-shadow:inset 2px 2px 0 rgba(58,44,28,.08),0 0 0 2px var(--seal)}
 #b64Output,#b64Input{font-family:'Courier New',monospace;font-size:10.5px;line-height:1.4;min-height:90px;word-break:break-all}
 #b64Input{min-height:120px}
-
 .file-hidden{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
-
 .drop{display:block;border:2px dashed var(--frame);border-radius:2px;padding:26px 18px;text-align:center;cursor:pointer;color:var(--ink-soft);font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;background:var(--card);-webkit-user-select:none;user-select:none}
 .drop:hover,.drop.over{background:var(--paper-d);color:var(--ink);border-color:var(--seal);border-style:solid}
 .drop b{color:var(--seal);font-weight:800}
 .drop .sub{display:block;margin-top:6px;font-size:9.5px;text-transform:none;letter-spacing:.05em;color:var(--ink-soft)}
+
+/* Чекбокс "QR как ссылка" */
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;margin-top:12px;background:var(--card);border:1px solid var(--frame);border-left:4px solid var(--seal);cursor:pointer;user-select:none;transition:background .15s}
+.check-row:hover{background:var(--paper-d)}
+.check-row input[type=checkbox]{margin:2px 0 0 0;width:18px;height:18px;accent-color:var(--seal);flex-shrink:0;cursor:pointer}
+.check-row .check-text{flex:1;font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.04em;line-height:1.4;color:var(--ink)}
+.check-row .check-text small{display:block;font-weight:400;font-size:10px;color:var(--ink-soft);margin-top:3px;letter-spacing:.02em;text-transform:none;font-family:'Courier New',monospace}
 
 .file-info{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-top:12px;background:var(--card);border:1px solid var(--frame);border-left:4px solid var(--gold);font-family:'Courier New',monospace;font-size:11px}
 .file-info img{width:52px;height:52px;object-fit:cover;border:1px solid var(--frame);flex-shrink:0}
@@ -93,30 +68,24 @@ textarea:focus,input:focus{box-shadow:inset 2px 2px 0 rgba(58,44,28,.08),0 0 0 2
 .file-info .meta{flex:1;line-height:1.4;overflow:hidden;word-break:break-all}
 .file-info .meta .name{font-family:Georgia,serif;font-size:13px;font-weight:700;color:var(--ink)}
 .file-info .meta .size{color:var(--ink-soft);font-size:10.5px;margin-top:2px}
-
 .btn-remove{background:transparent;border:1px solid var(--seal);color:var(--seal);padding:6px 10px;cursor:pointer;font-family:'Courier New',monospace;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:auto;flex-shrink:0;transition:all .2s;border-radius:2px}
 .btn-remove:hover{background:var(--seal);color:var(--paper)}
-
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
 .opt{display:flex;flex-direction:column;gap:5px}
 .opt label{font-family:'Courier New',monospace;font-size:9.5px;font-weight:700;color:var(--ink-soft);letter-spacing:.16em;text-transform:uppercase}
 .opt select{padding:11px 12px;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;font-family:'Courier New',monospace;font-size:12px;font-weight:700;outline:none;cursor:pointer;box-shadow:2px 2px 0 rgba(58,44,28,.15)}
-
 .btn-primary{width:100%;padding:16px;margin-top:6px;font-family:'Courier New',monospace;font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--paper);background:var(--seal);border:1px solid var(--frame);border-radius:2px;cursor:pointer;box-shadow:3px 3px 0 rgba(58,44,28,.4);transition:transform .1s,box-shadow .1s}
 .btn-primary:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:4px 4px 0 rgba(58,44,28,.45)}
 .btn-primary:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(58,44,28,.4)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-
 .result{margin-top:22px;text-align:center}
 .canvas-wrap{display:inline-block;position:relative;padding:12px;background:var(--paper);border:1px solid var(--frame);box-shadow:4px 4px 0 rgba(58,44,28,.25)}
 .canvas-wrap::before{content:'';position:absolute;inset:3px;border:1px solid var(--frame);pointer-events:none;opacity:.25}
 canvas{display:block;max-width:100%;height:auto;background:#fff}
-
 .status{font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;margin-top:14px;min-height:18px;line-height:1.5;color:var(--ink-soft)}
 .status.err{color:var(--seal)}
 .status.ok{color:var(--ok)}
 .status.warn{color:var(--gold)}
-
 .btn-row{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
 .btn-row.left{justify-content:flex-start}
 .btn-sm{padding:11px 22px;font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;cursor:pointer;box-shadow:2px 2px 0 rgba(58,44,28,.25);transition:all .1s;text-decoration:none;display:inline-block}
@@ -124,25 +93,20 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
 .btn-sm:disabled{opacity:.4;cursor:not-allowed}
 .btn-sm.seal{color:var(--seal);border-color:var(--seal)}
 .btn-sm.gold{color:var(--gold);border-color:var(--gold)}
-
 .hidden{display:none!important}
 .hint-foot{font-family:'Courier New',monospace;font-size:9.5px;color:var(--ink-soft);letter-spacing:.06em;margin-top:14px;line-height:1.5;text-align:center}
-
 .b64-preview img,.b64-preview video{max-width:100%;max-height:280px;display:block;margin:0 auto 12px;border:1px solid var(--frame);background:var(--paper)}
 .b64-preview audio{width:100%;margin:0 0 12px}
 .b64-preview pre{font-family:'Courier New',monospace;font-size:11px;line-height:1.4;background:var(--card);border:1px solid var(--frame);padding:10px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin-bottom:12px}
 .b64-hr{border:none;border-top:1px dashed var(--frame);margin:24px 0 18px;opacity:.5}
-
 .filename-row{display:flex;gap:6px;align-items:center}
 .filename-row input[type=text]{flex:1}
 .filename-row .ext-input{width:90px;font-family:'Courier New',monospace;font-size:12px;text-align:center;flex:0 0 auto}
 .filename-row .dot{color:var(--ink-soft);font-weight:700;font-family:'Courier New',monospace}
-
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--ink);color:var(--paper);padding:11px 24px;font-family:'Courier New',monospace;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;z-index:1000;opacity:0;transition:all .3s;pointer-events:none;box-shadow:3px 3px 0 rgba(58,44,28,.4);max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
 .warn-box{font-family:'Courier New',monospace;font-size:10.5px;color:var(--seal);background:rgba(139,32,25,.08);border:1px solid var(--seal);padding:9px 12px;margin-top:10px;line-height:1.4}
-
+.incoming-banner{font-family:'Courier New',monospace;font-size:10.5px;color:var(--ok);background:rgba(74,122,60,.1);border:1px solid var(--ok);padding:10px 12px;margin-bottom:14px;line-height:1.4;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 @media(max-width:520px){
   body{padding:16px}
   .frame{inset:8px}
@@ -184,18 +148,24 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
     </div>
 
     <div id="panel-file" class="hidden">
-      <div class="section-title">Загрузите файл <span class="hint">до ~2 КБ для QR</span></div>
+      <div class="section-title">Загрузите файл <span class="hint">до ~2.2 КБ для QR</span></div>
       <label class="drop" for="fileInput" id="dropLabel">
         <b>Нажмите</b> или перетащите сюда<br>
         <span class="sub">ipa · dmg · pkg · exe · apk · mp3 · mp4 · pdf · и любой</span>
       </label>
       <input type="file" id="fileInput" class="file-hidden">
       <div id="fileInfo"></div>
+
+      <label class="check-row">
+        <input type="checkbox" id="fileUrlMode" checked>
+        <span class="check-text">
+          QR как ссылка на этот сайт
+          <small>При сканировании откроется страница, base64 скопируется в буфер, файл будет готов к скачиванию</small>
+        </span>
+      </label>
     </div>
 
-    <!-- ============== BASE64 ============== -->
     <div id="panel-base64" class="hidden">
-
       <div class="section-title">Файл → Base64 <span class="hint">любой файл</span></div>
 
       <label class="drop" for="b64FileInput" id="b64DropLabel">
@@ -215,11 +185,22 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
         <button class="btn-sm" id="b64SaveTxtBtn">Скачать .txt</button>
         <button class="btn-sm gold" id="b64UseQrBtn">В QR-код</button>
       </div>
+
+      <label class="check-row">
+        <input type="checkbox" id="b64UrlMode" checked>
+        <span class="check-text">
+          QR как ссылка на этот сайт
+          <small>Сканирование откроет страницу, base64 скопируется, файл будет готов к скачиванию</small>
+        </span>
+      </label>
+
       <div class="hint-foot" id="b64SizeInfo" style="text-align:left"></div>
 
       <hr class="b64-hr">
 
-      <div class="section-title">Base64 → Файл <span class="hint">вставьте — восстановим и скачаем</span></div>
+      <div class="section-title">Base64 → Файл <span class="hint">вставьте — восстановим</span></div>
+
+      <div id="incomingBanner" class="incoming-banner hidden">Данные получены из QR-кода. Файл готов к скачиванию.</div>
 
       <div class="field-row">
         <div class="lbl">Base64 (с префиксом data:… или без)</div>
@@ -229,6 +210,7 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
       <div class="btn-row left">
         <label class="btn-sm" for="b64TxtInput" id="b64LoadTxtBtn" style="cursor:pointer">Загрузить из файла</label>
         <input type="file" id="b64TxtInput" class="file-hidden">
+        <button class="btn-sm" id="b64CopyInputBtn">Копировать base64</button>
         <button class="btn-sm" id="b64ClearBtn">Очистить</button>
       </div>
 
@@ -248,7 +230,6 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
 
       <div id="b64Preview" class="b64-preview"></div>
     </div>
-    <!-- ============== /BASE64 ============== -->
 
     <div class="opts" id="opts">
       <div class="opt">
@@ -707,11 +688,10 @@ var qrcode = (function(){
   var panelB64   = document.getElementById('panel-base64');
   var optsEl     = document.getElementById('opts');
   var textInput  = document.getElementById('textInput');
-
-  var dropLabel    = document.getElementById('dropLabel');
-  var fileInput    = document.getElementById('fileInput');
-  var fileInfo     = document.getElementById('fileInfo');
-
+  var dropLabel  = document.getElementById('dropLabel');
+  var fileInput  = document.getElementById('fileInput');
+  var fileInfo   = document.getElementById('fileInfo');
+  var fileUrlMode = document.getElementById('fileUrlMode');
   var sizeSel    = document.getElementById('sizeSel');
   var eclSel     = document.getElementById('eclSel');
   var genBtn     = document.getElementById('genBtn');
@@ -723,6 +703,7 @@ var qrcode = (function(){
   var toastEl    = document.getElementById('toast');
   var themeBtn   = document.getElementById('theme-toggle');
   var metaTheme  = document.getElementById('meta-theme');
+  var incomingBanner = document.getElementById('incomingBanner');
 
   var mode = 'text';
   var payload = null;
@@ -745,20 +726,37 @@ var qrcode = (function(){
     }
     fallbackDownload(blob, filename);
   }
-
   function fallbackDownload(blob, filename){
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.rel = 'noopener';
-    a.style.display = 'none';
+    a.href = url; a.download = filename; a.rel = 'noopener'; a.style.display = 'none';
     document.body.appendChild(a);
     try { a.click(); } catch(e){ window.open(url, '_blank'); }
     setTimeout(function(){
       URL.revokeObjectURL(url);
       if (a.parentNode) a.parentNode.removeChild(a);
     }, 1500);
+  }
+
+  /* ===== URL helpers для QR-ссылок ===== */
+  function b64urlEncode(s){
+    return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+  }
+  function b64urlDecode(s){
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return s;
+  }
+  function getShareBaseUrl(){
+    if (location.protocol === 'file:' || location.protocol === 'blob:') return null;
+    return location.origin + location.pathname;
+  }
+  function makeShareUrl(dataUrl, name){
+    var base = getShareBaseUrl();
+    if (!base) return null;
+    var enc = b64urlEncode(dataUrl);
+    var nm = (name || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40);
+    return base + '#b64=' + enc + (nm ? '&n=' + nm : '');
   }
 
   /* ===== Тема ===== */
@@ -780,7 +778,7 @@ var qrcode = (function(){
     toastEl.textContent = t;
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 2400);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 3000);
   }
 
   /* ===== Табы ===== */
@@ -836,26 +834,23 @@ var qrcode = (function(){
       }
       var meta = document.createElement('div'); meta.className = 'meta';
       meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div>' +
-        '<div class="size">' + fmtSize(file.size) + ' · в QR ~' + fmtSize(bytes) + '</div>';
+        '<div class="size">' + fmtSize(file.size) + ' · base64 ~' + fmtSize(bytes) + '</div>';
       box.appendChild(meta);
-      
       var removeBtn = document.createElement('button');
       removeBtn.className = 'btn-remove';
       removeBtn.textContent = 'Удалить';
-      removeBtn.onclick = function() {
-          payload = null;
-          fileInfo.innerHTML = '';
-          canvasWrap.classList.add('hidden');
-          dlBtn.classList.add('hidden');
-          setStatus('Файл удалён.', '');
+      removeBtn.onclick = function(){
+        payload = null;
+        fileInfo.innerHTML = '';
+        canvasWrap.classList.add('hidden');
+        dlBtn.classList.add('hidden');
+        setStatus('Файл удалён.', '');
       };
       box.appendChild(removeBtn);
-      
       fileInfo.appendChild(box);
-      if (bytes > 2900){
-        setStatus('Файл слишком большой для QR (макс. ~2.9 КБ).', 'warn');
-      } else if (bytes > 2300){
-        setStatus('Файл загружен, но близко к пределу QR.', 'warn');
+
+      if (bytes > 2600){
+        setStatus('Файл большой, но QR-ссылка может уместиться (снимите галочку если не влезет).', 'warn');
       } else {
         setStatus('Файл загружен. Нажмите «Сгенерировать».', 'ok');
       }
@@ -866,29 +861,57 @@ var qrcode = (function(){
 
   /* ===== Генерация QR ===== */
   genBtn.addEventListener('click', function(){
-    var data;
+    var dataForQR;
     if (mode === 'text'){
-      data = textInput.value; fileName = 'qr-text';
-      if (!data || !data.trim()){ setStatus('Введите текст или ссылку.', 'err'); return; }
+      dataForQR = textInput.value;
+      fileName = 'qr-text';
+      if (!dataForQR || !dataForQR.trim()){ setStatus('Введите текст или ссылку.', 'err'); return; }
     } else if (mode === 'file'){
-      data = payload;
-      if (!data){ setStatus('Сначала выберите файл.', 'err'); return; }
+      if (!payload){ setStatus('Сначала выберите файл.', 'err'); return; }
+      if (fileUrlMode && fileUrlMode.checked){
+        var shareUrl = makeShareUrl(payload, fileName);
+        if (shareUrl === null){
+          setStatus('Сайт открыт локально (file://) — QR-ссылки не будут работать. Загрузите файл на хостинг.', 'err');
+          showToast('Локальный запуск — ссылки не работают');
+          return;
+        }
+        if (new Blob([shareUrl]).size > 2900){
+          setStatus('Для QR-ссылки слишком большой файл. Снимите галочку «как ссылка» или сожмите файл.', 'err');
+          return;
+        }
+        dataForQR = shareUrl;
+      } else {
+        if (new Blob([payload]).size > 2900){
+          setStatus('Файл слишком большой для QR (макс ~2.9 КБ). Используйте режим ссылки.', 'err');
+          return;
+        }
+        dataForQR = payload;
+      }
     } else { return; }
+
     genBtn.disabled = true;
     setStatus('Генерация…');
     setTimeout(function(){
       try {
         var qr = qrcode(0, eclSel.value);
-        qr.addData(data, 'Byte');
+        qr.addData(dataForQR, 'Byte');
         qr.make();
         drawOnCanvas(qr, parseInt(sizeSel.value, 10));
         canvasWrap.classList.remove('hidden');
         dlBtn.classList.remove('hidden');
-        setStatus('Готово · ' + qr.getModuleCount() + '×' + qr.getModuleCount() + ' · ' + eclSel.value, 'ok');
-        showToast('QR-код готов');
+        var info = (mode === 'file' && fileUrlMode && fileUrlMode.checked)
+          ? 'QR-ссылка готова'
+          : 'QR-код готов';
+        setStatus(info + ' · ' + qr.getModuleCount() + '×' + qr.getModuleCount() + ' · ' + eclSel.value, 'ok');
+        showToast(info);
+        if (mode === 'file' && fileUrlMode && fileUrlMode.checked){
+          hint.textContent = 'Отсканируйте камерой — откроется страница, base64 скопируется, файл будет готов к скачиванию.';
+        } else {
+          hint.textContent = 'Наведите камеру телефона на код.';
+        }
       } catch (err){
         canvasWrap.classList.add('hidden'); dlBtn.classList.add('hidden');
-        setStatus('Ошибка: ' + (err.message || err) + '. Уменьшите объём или выберите L.', 'err');
+        setStatus('Ошибка: ' + (err.message || err) + '. Уменьшите объём.', 'err');
       } finally { genBtn.disabled = false; }
     }, 20);
   });
@@ -929,11 +952,13 @@ var qrcode = (function(){
   var b64CopyBtn     = document.getElementById('b64CopyBtn');
   var b64SaveTxtBtn  = document.getElementById('b64SaveTxtBtn');
   var b64UseQrBtn    = document.getElementById('b64UseQrBtn');
+  var b64UrlMode     = document.getElementById('b64UrlMode');
   var b64SizeInfo    = document.getElementById('b64SizeInfo');
   var b64Input       = document.getElementById('b64Input');
   var b64LoadTxtBtn  = document.getElementById('b64LoadTxtBtn');
   var b64TxtInput    = document.getElementById('b64TxtInput');
   var b64ClearBtn    = document.getElementById('b64ClearBtn');
+  var b64CopyInputBtn= document.getElementById('b64CopyInputBtn');
   var b64Filename    = document.getElementById('b64Filename');
   var b64Ext         = document.getElementById('b64Ext');
   var b64DownloadBtn = document.getElementById('b64DownloadBtn');
@@ -1093,13 +1118,11 @@ var qrcode = (function(){
 
   function handleB64File(file){
     loadedFileName = file.name.replace(/\.[^.]+$/, '') || 'file';
-
     if (file.size > 20 * 1024 * 1024) showToast('Большой файл — может занять время');
 
     var r = new FileReader();
     r.onload = function(){
       b64Output.value = r.result;
-
       b64FileInfo.innerHTML = '';
       var box = document.createElement('div');
       box.className = 'file-info';
@@ -1113,24 +1136,22 @@ var qrcode = (function(){
       var meta = document.createElement('div'); meta.className = 'meta';
       var b64len = r.result.length;
       var note;
-      if (b64len <= 2300) note = 'поместится в QR';
-      else if (b64len <= 2900) note = 'на грани QR';
-      else note = 'слишком длинно для QR';
+      if (b64len <= 2600) note = 'подходит для QR';
+      else if (b64len <= 2900) note = 'на грани, может не влезть';
+      else note = 'слишком длинно для QR-данных — используйте QR-ссылку';
       meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div>' +
         '<div class="size">' + fmtSize(file.size) + ' → ' + fmtSize(b64len) + ' base64 · ' + note + '</div>';
       box.appendChild(meta);
-      
       var removeBtn = document.createElement('button');
       removeBtn.className = 'btn-remove';
       removeBtn.textContent = 'Удалить';
-      removeBtn.onclick = function() {
-          b64Output.value = '';
-          b64FileInfo.innerHTML = '';
-          b64SizeInfo.textContent = '';
-          showToast('Файл удалён');
+      removeBtn.onclick = function(){
+        b64Output.value = '';
+        b64FileInfo.innerHTML = '';
+        b64SizeInfo.textContent = '';
+        showToast('Файл удалён');
       };
       box.appendChild(removeBtn);
-      
       b64FileInfo.appendChild(box);
       b64SizeInfo.textContent = 'Base64 готов · ' + fmtSize(b64len) + ' · ' + note;
       showToast('Base64 получен');
@@ -1156,9 +1177,26 @@ var qrcode = (function(){
   b64UseQrBtn.addEventListener('click', function(){
     var text = b64Output.value;
     if (!text){ showToast('Сначала загрузите файл'); return; }
-    var bytes = new Blob([text]).size;
-    if (bytes > 2900){ showToast('Слишком длинно для QR'); return; }
-    useInQr(text);
+
+    var dataForQR = text;
+    if (b64UrlMode && b64UrlMode.checked){
+      var shareUrl = makeShareUrl(text, loadedFileName);
+      if (shareUrl === null){
+        showToast('Сайт открыт локально — ссылки не работают');
+        return;
+      }
+      if (new Blob([shareUrl]).size > 2900){
+        showToast('Для QR-ссылки слишком длинно, попробуйте без галочки');
+        return;
+      }
+      dataForQR = shareUrl;
+    } else {
+      if (new Blob([text]).size > 2900){
+        showToast('Слишком длинно для QR-данных');
+        return;
+      }
+    }
+    useInQr(dataForQR);
   });
 
   function cleanFilename(raw){
@@ -1270,9 +1308,14 @@ var qrcode = (function(){
   b64QrFromInputBtn.addEventListener('click', function(){
     var raw = b64Input.value.trim();
     if (!raw) return;
-    var bytes = new Blob([raw]).size;
-    if (bytes > 2900){ showToast('Слишком длинно для QR'); return; }
+    if (new Blob([raw]).size > 2900){ showToast('Слишком длинно для QR'); return; }
     useInQr(raw);
+  });
+
+  b64CopyInputBtn.addEventListener('click', function(){
+    var v = b64Input.value.trim();
+    if (!v){ showToast('Поле пустое'); return; }
+    copyText(v);
   });
 
   b64LoadTxtBtn.addEventListener('click', function(){ b64TxtInput.click(); });
@@ -1309,6 +1352,10 @@ var qrcode = (function(){
     currentB64Blob = null;
     b64Ext.value = 'bin';
     b64Ext.dataset.auto = 'true';
+    if (incomingBanner) incomingBanner.classList.add('hidden');
+    if (location.hash.indexOf('b64=') >= 0){
+      try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+    }
     showToast('Очищено');
   });
 
@@ -1361,7 +1408,59 @@ var qrcode = (function(){
     setTimeout(function(){ titleEl.style.letterSpacing = '0.14em'; }, 200);
     if (clicks === 7) showToast('Привет из «ХАХАХА»');
   });
+
+  /* ============================================================
+     АВТО-ОБРАБОТКА ВХОДЯЩЕЙ QR-ССЫЛКИ
+     ============================================================ */
+  (function checkIncoming(){
+    var hash = location.hash || '';
+    var search = location.search || '';
+    var b64 = null, nm = null;
+
+    if (hash.indexOf('b64=') >= 0){
+      var m = hash.match(/[#&]b64=([^&]+)/);
+      if (m){
+        try { b64 = b64urlDecode(m[1]); } catch(e){ b64 = null; }
+      }
+      var mn = hash.match(/[#&]n=([^&]+)/);
+      if (mn){ try { nm = decodeURIComponent(mn[1]); } catch(e){} }
+    } else if (search){
+      try {
+        var params = new URLSearchParams(search);
+        if (params.has('b64')) b64 = b64urlDecode(params.get('b64'));
+        if (params.has('n')) nm = params.get('n');
+      } catch(e){}
+    }
+
+    if (!b64) return;
+
+    setTimeout(function(){
+      document.querySelector('.tab[data-tab="base64"]').click();
+      b64Input.value = b64;
+      if (nm && b64Filename) b64Filename.value = nm.replace(/\.[^.]+$/, '');
+      b64Ext.dataset.auto = 'true';
+      updateB64Decode();
+      if (incomingBanner) incomingBanner.classList.remove('hidden');
+
+      setTimeout(function(){
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(b64).then(function(){
+              showToast('Base64 из QR скопирован в буфер');
+            }).catch(function(){
+              showToast('Base64 из QR загружен. Файл готов к скачиванию.');
+            });
+          } else {
+            showToast('Base64 из QR загружен. Файл готов к скачиванию.');
+          }
+        } catch(e){
+          showToast('Base64 из QR загружен');
+        }
+        b64Preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 250);
+    }, 100);
+  })();
 })();
 </script>
 </body>
-</html>
+        </html>
