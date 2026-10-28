@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>QR-генератор</title>
+<meta name="theme-color" content="#ece2cd" id="meta-theme">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='108' fill='%23ece2cd'/%3E%3Ctext x='256' y='358' font-size='300' text-anchor='middle' font-family='Georgia' font-weight='700' fill='%238b2019'%3EQR%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#ece2cd; --paper-d:#ddd0b2; --ink:#26201a; --ink-soft:#5a4a38;
+  --seal:#8b2019; --gold:#9c7a2c; --frame:#3a2c1c; --card:rgba(58,44,28,.05);
+  --ok:#4a7a3c;
+  color-scheme: light;
+}
+:root.dark{
+  --paper:#1a1714; --paper-d:#24201a; --ink:#e8dfd0; --ink-soft:#a89880;
+  --seal:#d4513f; --gold:#d4a94c; --frame:#4a3a28; --card:rgba(232,223,208,.05);
+  --ok:#6a9c5a;
+  color-scheme: dark;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{min-height:100%;background:var(--paper);transition:background .3s}
+body{min-height:100vh;min-height:100dvh;width:100%;font-family:Georgia,serif;color:var(--ink);background:var(--paper);transition:background .3s,color .3s;padding:22px}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 50% 40% at 20% 15%,rgba(180,140,80,.15),transparent 70%),radial-gradient(ellipse 55% 45% at 80% 85%,rgba(140,100,50,.12),transparent 70%)}
+:root.dark body::before{opacity:.3}
+.frame{position:fixed;inset:12px;border:1px solid var(--frame);opacity:.4;pointer-events:none;z-index:1}
+.frame::before{content:'';position:absolute;inset:4px;border:1px solid var(--frame);opacity:.5}
+.page{position:relative;z-index:10;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 2px}
+.hdr h1{font-family:Georgia,serif;font-size:clamp(24px,5vw,38px);font-weight:700;letter-spacing:.14em;color:var(--ink);text-shadow:3px 3px 0 rgba(139,32,25,.15);cursor:pointer;user-select:none}
+.hdr h1 .dot{color:var(--seal)}
+.hdr .controls{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ctl-btn{background:var(--paper);border:1px solid var(--frame);border-radius:2px;padding:8px 14px;color:var(--ink);font-family:'Courier New',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:7px;box-shadow:2px 2px 0 rgba(58,44,28,.2);transition:all .1s}
+.ctl-btn:hover{background:var(--paper-d);transform:translate(-1px,-1px);box-shadow:3px 3px 0 rgba(58,44,28,.3)}
+.card{background:var(--paper);border:1px solid var(--frame);padding:22px;box-shadow:4px 4px 0 rgba(58,44,28,.22);position:relative}
+.card::before{content:'';position:absolute;inset:5px;border:1px solid var(--frame);pointer-events:none;opacity:.25}
+.card>*{position:relative;z-index:1}
+.tabs{display:flex;border:1px solid var(--frame);background:var(--card);margin-bottom:20px;overflow-x:auto;flex-wrap:nowrap}
+.tab{flex:1;min-width:90px;padding:13px 6px;background:transparent;border:none;border-right:1px solid var(--frame);color:var(--ink-soft);font-family:'Courier New',monospace;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;transition:background .15s,color .15s}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--paper-d);color:var(--seal);box-shadow:inset 0 -2px 0 var(--seal)}
+.section-title{font-family:'Courier New',monospace;font-size:11px;color:var(--ink);letter-spacing:.2em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid var(--frame);flex-wrap:wrap}
+.section-title .hint{font-size:9.5px;color:var(--ink-soft);font-weight:700;text-transform:none;letter-spacing:.05em}
+.field-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field-row .lbl{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:.16em;text-transform:uppercase}
+textarea,input[type=text]{width:100%;padding:14px;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;font-family:Georgia,serif;font-size:15px;outline:none;resize:vertical;box-shadow:inset 2px 2px 0 rgba(58,44,28,.08);transition:box-shadow .15s}
+textarea{min-height:110px;line-height:1.5}
+textarea:focus,input:focus{box-shadow:inset 2px 2px 0 rgba(58,44,28,.08),0 0 0 2px var(--seal)}
+#b64Output,#b64Input{font-family:'Courier New',monospace;font-size:10.5px;line-height:1.4;min-height:90px;word-break:break-all}
+#b64Input{min-height:120px}
+.file-hidden{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.drop{display:block;border:2px dashed var(--frame);border-radius:2px;padding:26px 18px;text-align:center;cursor:pointer;color:var(--ink-soft);font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;background:var(--card);-webkit-user-select:none;user-select:none}
+.drop:hover,.drop.over{background:var(--paper-d);color:var(--ink);border-color:var(--seal);border-style:solid}
+.drop b{color:var(--seal);font-weight:800}
+.drop .sub{display:block;margin-top:6px;font-size:9.5px;text-transform:none;letter-spacing:.05em;color:var(--ink-soft)}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;margin-top:12px;background:var(--card);border:1px solid var(--frame);border-left:4px solid var(--seal);cursor:pointer;user-select:none;transition:background .15s}
+.check-row:hover{background:var(--paper-d)}
+.check-row input[type=checkbox]{margin:2px 0 0 0;width:18px;height:18px;accent-color:var(--seal);flex-shrink:0;cursor:pointer}
+.check-row .check-text{flex:1;font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.04em;line-height:1.4;color:var(--ink)}
+.check-row .check-text small{display:block;font-weight:400;font-size:10px;color:var(--ink-soft);margin-top:3px;letter-spacing:.02em;text-transform:none;font-family:'Courier New',monospace}
+.file-info{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-top:12px;background:var(--card);border:1px solid var(--frame);border-left:4px solid var(--gold);font-family:'Courier New',monospace;font-size:11px}
+.file-info img{width:52px;height:52px;object-fit:cover;border:1px solid var(--frame);flex-shrink:0}
+.file-info .ico{width:52px;height:52px;display:flex;align-items:center;justify-content:center;border:1px solid var(--frame);background:var(--paper-d);font-family:'Courier New',monospace;font-size:10px;font-weight:800;color:var(--ink-soft);letter-spacing:.05em;flex-shrink:0;text-align:center;padding:2px;line-height:1.1}
+.file-info .meta{flex:1;line-height:1.4;overflow:hidden;word-break:break-all}
+.file-info .meta .name{font-family:Georgia,serif;font-size:13px;font-weight:700;color:var(--ink)}
+.file-info .meta .size{color:var(--ink-soft);font-size:10.5px;margin-top:2px}
+.btn-remove{background:transparent;border:1px solid var(--seal);color:var(--seal);padding:6px 10px;cursor:pointer;font-family:'Courier New',monospace;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:auto;flex-shrink:0;transition:all .2s;border-radius:2px}
+.btn-remove:hover{background:var(--seal);color:var(--paper)}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.opt{display:flex;flex-direction:column;gap:5px}
+.opt label{font-family:'Courier New',monospace;font-size:9.5px;font-weight:700;color:var(--ink-soft);letter-spacing:.16em;text-transform:uppercase}
+.opt select{padding:11px 12px;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;font-family:'Courier New',monospace;font-size:12px;font-weight:700;outline:none;cursor:pointer;box-shadow:2px 2px 0 rgba(58,44,28,.15)}
+.btn-primary{width:100%;padding:16px;margin-top:6px;font-family:'Courier New',monospace;font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--paper);background:var(--seal);border:1px solid var(--frame);border-radius:2px;cursor:pointer;box-shadow:3px 3px 0 rgba(58,44,28,.4);transition:transform .1s,box-shadow .1s}
+.btn-primary:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:4px 4px 0 rgba(58,44,28,.45)}
+.btn-primary:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(58,44,28,.4)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.result{margin-top:22px;text-align:center}
+.canvas-wrap{display:inline-block;position:relative;padding:12px;background:var(--paper);border:1px solid var(--frame);box-shadow:4px 4px 0 rgba(58,44,28,.25)}
+.canvas-wrap::before{content:'';position:absolute;inset:3px;border:1px solid var(--frame);pointer-events:none;opacity:.25}
+canvas{display:block;max-width:100%;height:auto;background:#fff}
+.status{font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;margin-top:14px;min-height:18px;line-height:1.5;color:var(--ink-soft)}
+.status.err{color:var(--seal)}
+.status.ok{color:var(--ok)}
+.status.warn{color:var(--gold)}
+.btn-row{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.btn-row.left{justify-content:flex-start}
+.btn-sm{padding:11px 22px;font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;cursor:pointer;box-shadow:2px 2px 0 rgba(58,44,28,.25);transition:all .1s;text-decoration:none;display:inline-block}
+.btn-sm:hover:not(:disabled){background:var(--paper-d);transform:translate(-1px,-1px);box-shadow:3px 3px 0 rgba(58,44,28,.3)}
+.btn-sm:disabled{opacity:.4;cursor:not-allowed}
+.btn-sm.seal{color:var(--seal);border-color:var(--seal)}
+.btn-sm.gold{color:var(--gold);border-color:var(--gold)}
+.hidden{display:none!important}
+.hint-foot{font-family:'Courier New',monospace;font-size:9.5px;color:var(--ink-soft);letter-spacing:.06em;margin-top:14px;line-height:1.5;text-align:center}
+.b64-preview img,.b64-preview video{max-width:100%;max-height:280px;display:block;margin:0 auto 12px;border:1px solid var(--frame);background:var(--paper)}
+.b64-preview audio{width:100%;margin:0 0 12px}
+.b64-preview pre{font-family:'Courier New',monospace;font-size:11px;line-height:1.4;background:var(--card);border:1px solid var(--frame);padding:10px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin-bottom:12px}
+.b64-hr{border:none;border-top:1px dashed var(--frame);margin:24px 0 18px;opacity:.5}
+.filename-row{display:flex;gap:6px;align-items:center}
+.filename-row input[type=text]{flex:1}
+.filename-row .ext-input{width:90px;font-family:'Courier New',monospace;font-size:12px;text-align:center;flex:0 0 auto}
+.filename-row .dot{color:var(--ink-soft);font-weight:700;font-family:'Courier New',monospace}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--ink);color:var(--paper);padding:11px 24px;font-family:'Courier New',monospace;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;z-index:1000;opacity:0;transition:all .3s;pointer-events:none;box-shadow:3px 3px 0 rgba(58,44,28,.4);max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.warn-box{font-family:'Courier New',monospace;font-size:10.5px;color:var(--seal);background:rgba(139,32,25,.08);border:1px solid var(--seal);padding:9px 12px;margin-top:10px;line-height:1.4}
+.incoming-banner{font-family:'Courier New',monospace;font-size:10.5px;color:var(--ok);background:rgba(74,122,60,.1);border:1px solid var(--ok);padding:10px 12px;margin-bottom:14px;line-height:1.4;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
+.zip-modes{display:flex;gap:6px;margin-bottom:16px;border:1px solid var(--frame);padding:3px;background:var(--card)}
+.zip-mode{flex:1;padding:9px 4px;background:transparent;border:none;font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:var(--ink-soft);cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:all .15s}
+.zip-mode.active{background:var(--paper-d);color:var(--seal);box-shadow:inset 0 -2px 0 var(--seal)}
+.file-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+@media(max-width:520px){
+  body{padding:16px}
+  .frame{inset:8px}
+  .card{padding:16px}
+  .hdr h1{font-size:22px;letter-spacing:.08em}
+  .ctl-btn{padding:6px 10px;font-size:10px}
+  .tab{padding:11px 4px;font-size:9px;letter-spacing:0;min-width:70px}
+  .opts{grid-template-columns:1fr;gap:8px}
+  .btn-sm{padding:10px 14px;font-size:10px}
+  .filename-row .ext-input{width:70px}
+  .file-info{flex-wrap:wrap}
+  .btn-remove{margin-left:0;width:100%;text-align:center;margin-top:8px}
+}
+</style>
+</head>
+<body>
+<div class="frame"></div>
+
+<div class="page">
+  <div class="hdr">
+    <h1 id="title">QR<span class="dot">·</span>ГЕНЕРАТОР</h1>
+    <div class="controls">
+      <button class="ctl-btn" id="theme-toggle">Тёмная тема</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-tab="text">Текст</button>
+      <button class="tab" data-tab="file">Файл</button>
+      <button class="tab" data-tab="base64">Base64</button>
+      <button class="tab" data-tab="zip">ZIP / Сжать</button>
+    </div>
+
+    <!-- TEXT -->
+    <div id="panel-text">
+      <div class="section-title">Введите текст <span class="hint">или URL</span></div>
+      <div class="field-row">
+        <textarea id="textInput" placeholder="Введите текст или ссылку…">Привет, мир!</textarea>
+      </div>
+    </div>
+
+    <!-- FILE -->
+    <div id="panel-file" class="hidden">
+      <div class="section-title">Загрузите файл <span class="hint">до ~2.2 КБ для QR</span></div>
+      <label class="drop" for="fileInput" id="dropLabel">
+        <b>Нажмите</b> или перетащите сюда<br>
+        <span class="sub">ipa · dmg · pkg · exe · apk · mp3 · mp4 · pdf · и любой</span>
+      </label>
+      <input type="file" id="fileInput" class="file-hidden">
+      <div id="fileInfo"></div>
+
+      <label class="check-row">
+        <input type="checkbox" id="fileUrlMode" checked>
+        <span class="check-text">
+          QR как ссылка на этот сайт
+          <small>При сканировании откроется страница, base64 скопируется в буфер, файл будет готов к скачиванию</small>
+        </span>
+      </label>
+    </div>
+
+    <!-- BASE64 -->
+    <div id="panel-base64" class="hidden">
+      <div class="section-title">Файл → Base64 <span class="hint">любой файл</span></div>
+
+      <label class="drop" for="b64FileInput" id="b64DropLabel">
+        <b>Нажмите</b> или перетащите файл сюда<br>
+        <span class="sub">ipa · dmg · pkg · macho · exe · apk · xapk · mp3 · mp4 · rar · и любой</span>
+      </label>
+      <input type="file" id="b64FileInput" class="file-hidden">
+      <div id="b64FileInfo"></div>
+
+      <div class="field-row" style="margin-top:12px">
+        <div class="lbl">Base64 строка</div>
+        <textarea id="b64Output" readonly placeholder="Здесь появится base64…"></textarea>
+      </div>
+
+      <div class="btn-row left">
+        <button class="btn-sm" id="b64CopyBtn">Копировать</button>
+        <button class="btn-sm" id="b64SaveTxtBtn">Скачать .txt</button>
+        <button class="btn-sm gold" id="b64UseQrBtn">В QR-код</button>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" id="b64UrlMode" checked>
+        <span class="check-text">
+          QR как ссылка на этот сайт
+          <small>Сканирование откроет страницу, base64 скопируется, файл будет готов к скачиванию</small>
+        </span>
+      </label>
+
+      <div class="hint-foot" id="b64SizeInfo" style="text-align:left"></div>
+
+      <hr class="b64-hr">
+
+      <div class="section-title">Base64 → Файл <span class="hint">вставьте — восстановим</span></div>
+
+      <div id="incomingBanner" class="incoming-banner hidden">Данные получены из QR-кода. Файл готов к скачиванию.</div>
+
+      <div class="field-row">
+        <div class="lbl">Base64 (с префиксом data:… или без)</div>
+        <textarea id="b64Input" placeholder="Вставьте data:image/jpeg;base64,…&#10;или чистый /9j/2wBD…"></textarea>
+      </div>
+
+      <div class="btn-row left">
+        <label class="btn-sm" for="b64TxtInput" id="b64LoadTxtBtn" style="cursor:pointer">Загрузить из файла</label>
+        <input type="file" id="b64TxtInput" class="file-hidden">
+        <button class="btn-sm" id="b64CopyInputBtn">Копировать base64</button>
+        <button class="btn-sm" id="b64ClearBtn">Очистить</button>
+      </div>
+
+      <div class="field-row" style="margin-top:12px">
+        <div class="lbl">Имя файла (расширение автоматически)</div>
+        <div class="filename-row">
+          <input type="text" id="b64Filename" value="decoded" placeholder="decoded">
+          <span class="dot">.</span>
+          <input type="text" id="b64Ext" value="bin" class="ext-input" placeholder="bin">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-sm seal" id="b64DownloadBtn" disabled>Скачать файл</button>
+        <button class="btn-sm" id="b64QrFromInputBtn" disabled>В QR-код</button>
+      </div>
+
+      <div id="b64Preview" class="b64-preview"></div>
+    </div>
+
+    <!-- ZIP / СЖАТЬ -->
+    <div id="panel-zip" class="hidden">
+      <div class="zip-modes">
+        <button class="zip-mode active" data-mode="pack">Упаковать</button>
+        <button class="zip-mode" data-mode="unpack">Распаковать</button>
+        <button class="zip-mode" data-mode="compress">Сжать фото</button>
+      </div>
+
+      <!-- РЕЖИМ: УПАКОВАТЬ -->
+      <div id="zip-pack">
+        <div class="section-title">Упаковать в ZIP <span class="hint">выберите файлы</span></div>
+        <label class="drop" for="zipFileInput" id="zipDropLabel">
+          <b>Нажмите</b> или перетащите файлы<br>
+          <span class="sub">Можно выбрать несколько файлов сразу</span>
+        </label>
+        <input type="file" id="zipFileInput" class="file-hidden" multiple>
+        
+        <div id="zipFileList" class="file-list"></div>
+        
+        <div id="zipActions" class="hidden" style="margin-top:16px">
+          <button class="btn-primary" id="createZipBtn">Создать ZIP-архив</button>
+        </div>
+      </div>
+
+      <!-- РЕЖИМ: РАСПАКОВАТЬ -->
+      <div id="zip-unpack" class="hidden">
+        <div class="section-title">Распаковать ZIP <span class="hint">загрузите архив</span></div>
+        <label class="drop" for="unzipFileInput" id="unzipDropLabel">
+          <b>Нажмите</b> или перетащите ZIP<br>
+          <span class="sub">.zip файл</span>
+        </label>
+        <input type="file" id="unzipFileInput" class="file-hidden" accept=".zip">
+        
+        <div id="unzipFileList" class="file-list"></div>
+      </div>
+
+      <!-- РЕЖИМ: СЖАТЬ -->
+      <div id="zip-compress" class="hidden">
+        <div class="section-title">Сжать / Конвертировать фото <span class="hint">выберите формат</span></div>
+        <label class="drop" for="compressFileInput" id="compressDropLabel">
+          <b>Нажмите</b> или перетащите фото<br>
+          <span class="sub">jpg · png · webp · и т.д.</span>
+        </label>
+        <input type="file" id="compressFileInput" class="file-hidden" accept="image/*">
+        <div id="compressFileInfo"></div>
+        
+        <div id="compressOptions" class="hidden" style="margin-top:16px;">
+          <div class="opts">
+            <div class="opt">
+              <label>Формат</label>
+              <select id="compressFormat">
+                <option value="jpeg">JPEG (фото)</option>
+                <option value="png">PNG (без потерь)</option>
+                <option value="webp">WebP (компактный)</option>
+              </select>
+            </div>
+            <div class="opt" id="qualityOpt">
+              <label>Качество: <span id="qualityValue">60%</span></label>
+              <input type="range" id="qualityRange" min="10" max="100" value="60">
+            </div>
+          </div>
+          <button class="btn-sm seal" id="compressBtn" style="width:100%;">Скачать</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ОБЩИЕ НАСТРОЙКИ -->
+    <div class="opts" id="opts">
+      <div class="opt">
+        <label>Размер</label>
+        <select id="sizeSel">
+          <option value="256">256 px</option>
+          <option value="512" selected>512 px</option>
+          <option value="1024">1024 px</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>Коррекция ошибок</label>
+        <select id="eclSel">
+          <option value="L" selected>L — макс. объём</option>
+          <option value="M">M — средняя</option>
+          <option value="Q">Q — высокая</option>
+          <option value="H">H — максимальная</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="genBtn">Сгенерировать QR-код</button>
+
+    <div class="result">
+      <div id="canvasWrap" class="hidden">
+        <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="btn-row">
+        <button class="btn-sm gold hidden" id="dlBtn">Скачать PNG</button>
+      </div>
+      <p class="hint-foot" id="hint">Всё работает локально. Никаких запросов в интернет.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== qrcode-generator (MIT) ===== */
+var qrcode = (function(){
+  var QRErrorCorrectionLevel = { L:1, M:0, Q:3, H:2 };
+  var QRMath = (function(){
+    var EXP = new Array(256), LOG = new Array(256);
+    for (var i = 0; i < 8; i++) EXP[i] = 1 << i;
+    for (var i = 8; i < 256; i++) EXP[i] = EXP[i-4] ^ EXP[i-5] ^ EXP[i-6] ^ EXP[i-8];
+    for (var i = 0; i < 255; i++) LOG[EXP[i]] = i;
+    return {
+      glog: function(n){ if (n < 1) throw new Error('glog(' + n + ')'); return LOG[n]; },
+      gexp: function(n){ while (n < 0) n += 255; while (n >= 256) n -= 255; return EXP[n]; }
+    };
+  })();
+  function QRPolynomial(num, shift){
+    var off = 0;
+    while (off < num.length && num[off] == 0) off++;
+    this.num = new Array(num.length - off + shift);
+    for (var i = 0; i < num.length - off; i++) this.num[i] = num[i + off];
+  }
+  QRPolynomial.prototype = {
+    get: function(i){ return this.num[i]; },
+    getLength: function(){ return this.num.length; },
+    multiply: function(e){
+      var num = new Array(this.getLength() + e.getLength() - 1);
+      for (var i = 0; i < num.length; i++) num[i] = 0;
+      for (var i = 0; i < this.getLength(); i++)
+        for (var j = 0; j < e.getLength(); j++)
+          num[i+j] ^= QRMath.gexp(QRMath.glog(this.get(i)) + QRMath.glog(e.get(j)));
+      return new QRPolynomial(num, 0);
+    },
+    mod: function(e){
+      if (this.getLength() - e.getLength() < 0) return this;
+      var ratio = QRMath.glog(this.get(0)) - QRMath.glog(e.get(0));
+      var num = new Array(this.getLength());
+      for (var i = 0; i < this.getLength(); i++) num[i] = this.get(i);
+      for (var i = 0; i < e.getLength(); i++) num[i] ^= QRMath.gexp(QRMath.glog(e.get(i)) + ratio);
+      return new QRPolynomial(num, 0).mod(e);
+    }
+  };
+  function QRRSBlock(totalCount, dataCount){ this.totalCount = totalCount; this.dataCount = dataCount; }
+  QRRSBlock.RS_BLOCK_TABLE = [
+    [1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],
+    [1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],
+    [1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],
+    [2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],
+    [2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],
+    [4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],
+    [4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],
+    [5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],
+    [1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],
+    [3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],
+    [4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],
+    [4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],
+    [8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],
+    [8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],
+    [7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],
+    [13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],
+    [17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],
+    [12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],
+    [17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],
+    [20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]
+  ];
+  QRRSBlock.getRSBlocks = function(t, ecl){
+    var rs = QRRSBlock.getRsBlockTable(t, ecl);
+    if (rs == undefined) throw new Error('bad rs block');
+    var len = rs.length / 3, list = [];
+    for (var i = 0; i < len; i++){
+      var count = rs[i*3], total = rs[i*3+1], data = rs[i*3+2];
+      for (var j = 0; j < count; j++) list.push(new QRRSBlock(total, data));
+    }
+    return list;
+  };
+  QRRSBlock.getRsBlockTable = function(t, ecl){
+    switch (ecl){
+      case QRErrorCorrectionLevel.L: return QRRSBlock.RS_BLOCK_TABLE[(t-1)*4+0];
+      case QRErrorCorrectionLevel.M: return QRRSBlock.RS_BLOCK_TABLE[(t-1)*4+1];
+      case QRErrorCorrectionLevel.Q: return QRRSBlock.RS_BLOCK_TABLE[(t-1)*4+2];
+      case QRErrorCorrectionLevel.H: return QRRSBlock.RS_BLOCK_TABLE[(t-1)*4+3];
+    }
+  };
+  function QRBitBuffer(){ this.buffer = []; this.length = 0; }
+  QRBitBuffer.prototype = {
+    getBuffer: function(){ return this.buffer; },
+    getLengthInBits: function(){ return this.length; },
+    put: function(num, length){ for (var i=0;i<length;i++) this.putBit(((num >>> (length-i-1)) & 1) == 1); },
+    putBit: function(bit){
+      var idx = Math.floor(this.length / 8);
+      if (this.buffer.length <= idx) this.buffer.push(0);
+      if (bit) this.buffer[idx] |= (0x80 >>> (this.length % 8));
+      this.length++;
+    }
+  };
+  var QRUtil = {
+    PATTERN_POSITION_TABLE: [
+      [],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],
+      [6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],
+      [6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],
+      [6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],
+      [6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],
+      [6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],
+      [6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]
+    ],
+    G15: (1<<10)|(1<<8)|(1<<5)|(1<<4)|(1<<2)|(1<<1)|(1<<0),
+    G18: (1<<12)|(1<<11)|(1<<10)|(1<<9)|(1<<8)|(1<<5)|(1<<2)|(1<<0),
+    G15_MASK: (1<<14)|(1<<12)|(1<<10)|(1<<4)|(1<<1),
+    getBCHTypeInfo: function(data){
+      var d = data << 10;
+      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15) >= 0)
+        d ^= (QRUtil.G15 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15)));
+      return ((data << 10) | d) ^ QRUtil.G15_MASK;
+    },
+    getBCHTypeNumber: function(data){
+      var d = data << 12;
+      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18) >= 0)
+        d ^= (QRUtil.G18 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18)));
+      return (data << 12) | d;
+    },
+    getBCHDigit: function(data){ var d = 0; while (data != 0){ d++; data >>>= 1; } return d; },
+    getPatternPosition: function(t){ return QRUtil.PATTERN_POSITION_TABLE[t - 1]; },
+    getMaskFunction: function(p){
+      switch (p){
+        case 0: return function(i,j){ return (i+j)%2 == 0; };
+        case 1: return function(i,j){ return i%2 == 0; };
+        case 2: return function(i,j){ return j%3 == 0; };
+        case 3: return function(i,j){ return (i+j)%3 == 0; };
+        case 4: return function(i,j){ return (Math.floor(i/2)+Math.floor(j/3))%2 == 0; };
+        case 5: return function(i,j){ return (i*j)%2 + (i*j)%3 == 0; };
+        case 6: return function(i,j){ return ((i*j)%2 + (i*j)%3)%2 == 0; };
+        case 7: return function(i,j){ return ((i*j)%3 + (i+j)%2)%2 == 0; };
+      }
+    },
+    getErrorCorrectPolynomial: function(len){
+      var a = new QRPolynomial([1], 0);
+      for (var i = 0; i < len; i++) a = a.multiply(new QRPolynomial([1, QRMath.gexp(i)], 0));
+      return a;
+    },
+    getLengthInBits: function(mode, type){
+      if (type < 10){
+        switch (mode){ case 1: return 10; case 2: return 9; case 4: return 8; case 8: return 8; }
+      } else if (type < 27){
+        switch (mode){ case 1: return 12; case 2: return 11; case 4: return 16; case 8: return 10; }
+      } else {
+        switch (mode){ case 1: return 14; case 2: return 13; case 4: return 16; case 8: return 12; }
+      }
+      throw new Error('mode:' + mode + '/type:' + type);
+    },
+    getLostPoint: function(qr){
+      var m = qr.getModuleCount(), lp = 0, r, c, sameCount, dark;
+      for (r = 0; r < m; r++){
+        for (c = 0; c < m; c++){
+          sameCount = 0; dark = qr.isDark(r, c);
+          for (var dr2 = -1; dr2 <= 1; dr2++){
+            if (r + dr2 < 0 || m <= r + dr2) continue;
+            for (var dc2 = -1; dc2 <= 1; dc2++){
+              if (c + dc2 < 0 || m <= c + dc2) continue;
+              if (dr2 == 0 && dc2 == 0) continue;
+              if (dark == qr.isDark(r + dr2, c + dc2)) sameCount++;
+            }
+          }
+          if (sameCount > 5) lp += (3 + sameCount - 5);
+        }
+      }
+      for (r = 0; r < m - 1; r++){
+        for (c = 0; c < m - 1; c++){
+          var cnt = 0;
+          if (qr.isDark(r, c)) cnt++;
+          if (qr.isDark(r + 1, c)) cnt++;
+          if (qr.isDark(r, c + 1)) cnt++;
+          if (qr.isDark(r + 1, c + 1)) cnt++;
+          if (cnt == 0 || cnt == 4) lp += 3;
+        }
+      }
+      for (r = 0; r < m; r++)
+        for (c = 0; c < m - 6; c++)
+          if (qr.isDark(r, c) && !qr.isDark(r, c+1) && qr.isDark(r, c+2) && qr.isDark(r, c+3) &&
+              qr.isDark(r, c+4) && !qr.isDark(r, c+5) && qr.isDark(r, c+6)) lp += 40;
+      for (c = 0; c < m; c++)
+        for (r = 0; r < m - 6; r++)
+          if (qr.isDark(r, c) && !qr.isDark(r+1, c) && qr.isDark(r+2, c) && qr.isDark(r+3, c) &&
+              qr.isDark(r+4, c) && !qr.isDark(r+5, c) && qr.isDark(r+6, c)) lp += 40;
+      var dc = 0;
+      for (c = 0; c < m; c++) for (r = 0; r < m; r++) if (qr.isDark(r, c)) dc++;
+      var ratio = Math.abs(100 * dc / m / m - 50) / 5;
+      lp += ratio * 10;
+      return lp;
+    }
+  };
+  function QR8bitByte(data){
+    this.mode = 4; this.data = data; this.parsedData = [];
+    for (var i = 0, l = this.data.length; i < l; i++){
+      var arr = [], code = this.data.charCodeAt(i);
+      if (code > 0x10000){
+        arr[0] = 0xF0 | ((code & 0x1C0000) >>> 18);
+        arr[1] = 0x80 | ((code & 0x3F000) >>> 12);
+        arr[2] = 0x80 | ((code & 0xFC0) >>> 6);
+        arr[3] = 0x80 | (code & 0x3F);
+      } else if (code > 0x800){
+        arr[0] = 0xE0 | ((code & 0xF000) >>> 12);
+        arr[1] = 0x80 | ((code & 0xFC0) >>> 6);
+        arr[2] = 0x80 | (code & 0x3F);
+      } else if (code > 0x80){
+        arr[0] = 0xC0 | ((code & 0x7C0) >>> 6);
+        arr[1] = 0x80 | (code & 0x3F);
+      } else {
+        arr[0] = code;
+      }
+      this.parsedData.push.apply(this.parsedData, arr);
+    }
+    var high = false;
+    for (var i = 0; i < this.parsedData.length; i++) if (this.parsedData[i] > 127){ high = true; break; }
+    if (high) this.parsedData = [0xEF, 0xBB, 0xBF].concat(this.parsedData);
+  }
+  QR8bitByte.prototype = {
+    getLength: function(){ return this.parsedData.length; },
+    write: function(b){ for (var i = 0; i < this.parsedData.length; i++) b.put(this.parsedData[i], 8); }
+  };
+
+  return function(typeNumber, ecl){
+    var PAD0 = 0xEC, PAD1 = 0x11;
+    var _typeNumber = typeNumber;
+    var _ecl = QRErrorCorrectionLevel[ecl];
+    var _modules = null, _count = 0, _cache = null, _list = [];
+    var _this = {};
+    function makeImpl(test, mask){
+      _count = _typeNumber * 4 + 17;
+      _modules = [];
+      for (var r = 0; r < _count; r++){
+        _modules[r] = [];
+        for (var c = 0; c < _count; c++) _modules[r][c] = null;
+      }
+      placeProbe(0, 0); placeProbe(_count - 7, 0); placeProbe(0, _count - 7);
+      placeAdjust(); placeTiming();
+      placeTypeInfo(test, mask);
+      if (_typeNumber >= 7) placeTypeNumber(test);
+      if (!_cache) _cache = createData(_typeNumber, _ecl, _list);
+      mapData(_cache, mask);
+    }
+    function placeProbe(row, col){
+      for (var r = -1; r <= 7; r++){
+        if (row + r <= -1 || _count <= row + r) continue;
+        for (var c = -1; c <= 7; c++){
+          if (col + c <= -1 || _count <= col + c) continue;
+          _modules[row+r][col+c] = (0 <= r && r <= 6 && (c == 0 || c == 6)) ||
+            (0 <= c && c <= 6 && (r == 0 || r == 6)) ||
+            (2 <= r && r <= 4 && 2 <= c && c <= 4);
+        }
+      }
+    }
+    function bestMask(){
+      var min = 0, pat = 0;
+      for (var i = 0; i < 8; i++){
+        makeImpl(true, i);
+        var lp = QRUtil.getLostPoint(_this);
+        if (i == 0 || min > lp){ min = lp; pat = i; }
+      }
+      return pat;
+    }
+    function placeTiming(){
+      for (var r = 8; r < _count - 8; r++) if (_modules[r][6] == null) _modules[r][6] = (r % 2 == 0);
+      for (var c = 8; c < _count - 8; c++) if (_modules[6][c] == null) _modules[6][c] = (c % 2 == 0);
+    }
+    function placeAdjust(){
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+      for (var i = 0; i < pos.length; i++){
+        for (var j = 0; j < pos.length; j++){
+          var row = pos[i], col = pos[j];
+          if (_modules[row][col] != null) continue;
+          for (var r = -2; r <= 2; r++)
+            for (var c = -2; c <= 2; c++)
+              _modules[row+r][col+c] = (r == -2 || r == 2 || c == -2 || c == 2 || (r == 0 && c == 0));
+        }
+      }
+    }
+    function placeTypeNumber(test){
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+      for (var i = 0; i < 18; i++){
+        var m = (!test && ((bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _count - 8 - 3] = m;
+      }
+      for (var i = 0; i < 18; i++){
+        var m = (!test && ((bits >> i) & 1) == 1);
+        _modules[i % 3 + _count - 8 - 3][Math.floor(i / 3)] = m;
+      }
+    }
+    function placeTypeInfo(test, mask){
+      var data = (_ecl << 3) | mask;
+      var bits = QRUtil.getBCHTypeInfo(data);
+      for (var i = 0; i < 15; i++){
+        var m = (!test && ((bits >> i) & 1) == 1);
+        if (i < 6) _modules[i][8] = m;
+        else if (i < 8) _modules[i+1][8] = m;
+        else _modules[_count - 15 + i][8] = m;
+      }
+      for (var i = 0; i < 15; i++){
+        var m = (!test && ((bits >> i) & 1) == 1);
+        if (i < 8) _modules[8][_count - i - 1] = m;
+        else if (i < 9) _modules[8][15 - i - 1 + 1] = m;
+        else _modules[8][15 - i - 1] = m;
+      }
+      _modules[_count - 8][8] = !test;
+    }
+    function mapData(data, mask){
+      var inc = -1, row = _count - 1, bitIndex = 7, byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(mask);
+      for (var col = _count - 1; col > 0; col -= 2){
+        if (col == 6) col -= 1;
+        while (true){
+          for (var c = 0; c < 2; c++){
+            if (_modules[row][col-c] == null){
+              var dark = false;
+              if (byteIndex < data.length) dark = ((data[byteIndex] >>> bitIndex) & 1) == 1;
+              if (maskFunc(row, col - c)) dark = !dark;
+              _modules[row][col-c] = dark;
+              bitIndex--;
+              if (bitIndex == -1){ byteIndex++; bitIndex = 7; }
+            }
+          }
+          row += inc;
+          if (row < 0 || _count <= row){ row -= inc; inc = -inc; break; }
+        }
+      }
+    }
+    function createBytes(buf, blocks){
+      var offset = 0, maxDc = 0, maxEc = 0;
+      var dcArr = new Array(blocks.length);
+      var ecArr = new Array(blocks.length);
+      for (var r = 0; r < blocks.length; r++){
+        var dcCount = blocks[r].dataCount;
+        var ecCount = blocks[r].totalCount - dcCount;
+        maxDc = Math.max(maxDc, dcCount);
+        maxEc = Math.max(maxEc, ecCount);
+        dcArr[r] = new Array(dcCount);
+        for (var i = 0; i < dcCount; i++) dcArr[r][i] = 0xff & buf.getBuffer()[i + offset];
+        offset += dcCount;
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = new QRPolynomial(dcArr[r], rsPoly.getLength() - 1);
+        var modPoly = rawPoly.mod(rsPoly);
+        ecArr[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecArr[r].length; i++){
+          var mi = i + modPoly.getLength() - ecArr[r].length;
+          ecArr[r][i] = (mi >= 0) ? modPoly.get(mi) : 0;
+        }
+      }
+      var total = 0;
+      for (var i = 0; i < blocks.length; i++) total += blocks[i].totalCount;
+      var data = new Array(total), idx = 0;
+      for (var i = 0; i < maxDc; i++)
+        for (var r = 0; r < blocks.length; r++)
+          if (i < dcArr[r].length) data[idx++] = dcArr[r][i];
+      for (var i = 0; i < maxEc; i++)
+        for (var r = 0; r < blocks.length; r++)
+          if (i < ecArr[r].length) data[idx++] = ecArr[r][i];
+      return data;
+    }
+    function createData(typeNumber, ecl, list){
+      var blocks = QRRSBlock.getRSBlocks(typeNumber, ecl);
+      var buf = new QRBitBuffer();
+      for (var i = 0; i < list.length; i++){
+        buf.put(list[i].mode, 4);
+        buf.put(list[i].getLength(), QRUtil.getLengthInBits(list[i].mode, typeNumber));
+        list[i].write(buf);
+      }
+      var totalData = 0;
+      for (var i = 0; i < blocks.length; i++) totalData += blocks[i].dataCount;
+      if (buf.getLengthInBits() > totalData * 8) throw new Error('code length overflow');
+      if (buf.getLengthInBits() + 4 <= totalData * 8) buf.put(0, 4);
+      while (buf.getLengthInBits() % 8 != 0) buf.putBit(false);
+      while (true){
+        if (buf.getLengthInBits() >= totalData * 8) break;
+        buf.put(PAD0, 8);
+        if (buf.getLengthInBits() >= totalData * 8) break;
+        buf.put(PAD1, 8);
+      }
+      return createBytes(buf, blocks);
+    }
+    _this.addData = function(data, mode){
+      mode = mode || 'Byte';
+      if (mode !== 'Byte') throw new Error('mode:' + mode);
+      _list.push(new QR8bitByte(data));
+      _cache = null;
+    };
+    _this.isDark = function(r, c){
+      if (r < 0 || _count <= r || c < 0 || _count <= c) throw r + ',' + c;
+      return _modules[r][c];
+    };
+    _this.getModuleCount = function(){ return _count; };
+    _this.make = function(){
+      if (_typeNumber < 1){
+        var tn = 1;
+        for (; tn < 40; tn++){
+          var blocks = QRRSBlock.getRSBlocks(tn, _ecl);
+          var buf = new QRBitBuffer();
+          for (var i = 0; i < _list.length; i++){
+            buf.put(_list[i].mode, 4);
+            buf.put(_list[i].getLength(), QRUtil.getLengthInBits(_list[i].mode, tn));
+            _list[i].write(buf);
+          }
+          var total = 0;
+          for (var i = 0; i < blocks.length; i++) total += blocks[i].dataCount;
+          if (buf.getLengthInBits() <= total * 8) break;
+        }
+        _typeNumber = tn;
+      }
+      makeImpl(false, bestMask());
+    };
+    return _this;
+  };
+})();
+
+/* ============================================================
+   ZIP-АРХИВАТОР (Собственная реализация, без библиотек)
+   ============================================================ */
+var crcTable = new Uint32Array(256);
+for (var i = 0; i < 256; i++) {
+  var c = i;
+  for (var j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+  crcTable[i] = c;
+}
+function crc32(data) {
+  var crc = -1;
+  for (var i = 0; i < data.length; i++) {
+    crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xFF];
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+async function createZipBlob(files) {
+  var encoder = new TextEncoder();
+  var parts = [];
+  var centralParts = [];
+  var offset = 0;
+
+  for (var f = 0; f < files.length; f++) {
+    var file = files[f];
+    var nameBytes = encoder.encode(file.name);
+    var data = file.data;
+    var crc = crc32(data);
+    var size = data.length;
+    var compData = data;
+    var compSize = size;
+    var method = 0; // 0 = Store
+
+    try {
+      if (typeof CompressionStream !== 'undefined') {
+        var stream = new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+        compData = new Uint8Array(await new Response(stream).arrayBuffer());
+        compSize = compData.length;
+        method = 8; // 8 = Deflate
+        if (compSize >= size) {
+          compData = data;
+          compSize = size;
+          method = 0;
+        }
+      }
+    } catch(e) { console.warn('Compression failed, storing raw', e); }
+
+    // Local File Header
+    var header = new Uint8Array(30 + nameBytes.length);
+    var view = new DataView(header.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0x0800, true); // UTF-8
+    view.setUint16(8, method, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint32(14, crc, true);
+    view.setUint32(18, compSize, true);
+    view.setUint32(22, size, true);
+    view.setUint16(26, nameBytes.length, true);
+    view.setUint16(28, 0, true);
+    header.set(nameBytes, 30);
+    parts.push(header, compData);
+
+    // Central Directory
+    var central = new Uint8Array(46 + nameBytes.length);
+    var cView = new DataView(central.buffer);
+    cView.setUint32(0, 0x02014b50, true);
+    cView.setUint16(4, 20, true);
+    cView.setUint16(6, 20, true);
+    cView.setUint16(8, 0x0800, true);
+    cView.setUint16(10, method, true);
+    cView.setUint16(12, 0, true);
+    cView.setUint16(14, 0, true);
+    cView.setUint32(16, crc, true);
+    cView.setUint32(20, compSize, true);
+    cView.setUint32(24, size, true);
+    cView.setUint16(28, nameBytes.length, true);
+    cView.setUint16(30, 0, true);
+    cView.setUint16(32, 0, true);
+    cView.setUint16(34, 0, true);
+    cView.setUint16(36, 0, true);
+    cView.setUint32(38, 0, true);
+    cView.setUint32(42, offset, true);
+    central.set(nameBytes, 46);
+    centralParts.push(central);
+    offset += header.length + compData.length;
+  }
+
+  var centralSize = 0;
+  for (var i = 0; i < centralParts.length; i++) centralSize += centralParts[i].length;
+
+  var eocd = new Uint8Array(22);
+  var eView = new DataView(eocd.buffer);
+  eView.setUint32(0, 0x06054b50, true);
+  eView.setUint16(4, 0, true);
+  eView.setUint16(6, 0, true);
+  eView.setUint16(8, files.length, true);
+  eView.setUint16(10, files.length, true);
+  eView.setUint32(12, centralSize, true);
+  eView.setUint32(16, offset, true);
+  eView.setUint16(20, 0, true);
+
+  return new Blob([...parts, ...centralParts, eocd], { type: 'application/zip' });
+}
+
+/* ============================================================
+   ZIP-РАСПАКОВЩИК
+   ============================================================ */
+async function unzipBlob(zipBlob) {
+  var buffer = await zipBlob.arrayBuffer();
+  var data = new Uint8Array(buffer);
+  var view = new DataView(buffer);
+
+  // Поиск EOCD
+  var eocdOffset = -1;
+  for (var i = data.length - 22; i >= 0; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocdOffset = i;
+      break;
+    }
+  }
+  if (eocdOffset === -1) throw new Error('Не похоже на ZIP-архив');
+
+  var fileCount = view.getUint16(eocdOffset + 10, true);
+  var centralDirOffset = view.getUint32(eocdOffset + 16, true);
+
+  var offset = centralDirOffset;
+  var files = [];
+
+  for (var i = 0; i < fileCount; i++) {
+    if (view.getUint32(offset, true) !== 0x02014b50) break;
+
+    var method = view.getUint16(offset + 10, true);
+    var compSize = view.getUint32(offset + 20, true);
+    var nameLen = view.getUint16(offset + 28, true);
+    var extraLen = view.getUint16(offset + 30, true);
+    var commentLen = view.getUint16(offset + 32, true);
+    var localHeaderOffset = view.getUint32(offset + 42, true);
+
+    var nameBytes = data.slice(offset + 46, offset + 46 + nameLen);
+    var name = new TextDecoder().decode(nameBytes);
+
+    // Локальный заголовок
+    var lhView = new DataView(buffer, localHeaderOffset);
+    var lhNameLen = lhView.getUint16(26, true);
+    var lhExtraLen = lhView.getUint16(28, true);
+    var dataStart = localHeaderOffset + 30 + lhNameLen + lhExtraLen;
+
+    var compData = data.slice(dataStart, dataStart + compSize);
+
+    var fileData = null;
+    try {
+      if (method === 0) {
+        fileData = compData;
+      } else if (method === 8) {
+        var ds = new DecompressionStream('deflate-raw');
+        var writer = ds.writable.getWriter();
+        writer.write(compData);
+        writer.close();
+        var reader = ds.readable.getReader();
+        var chunks = [];
+        while (true) {
+          var res = await reader.read();
+          if (res.done) break;
+          chunks.push(res.value);
+        }
+        var total = 0;
+        for (var k = 0; k < chunks.length; k++) total += chunks[k].length;
+        fileData = new Uint8Array(total);
+        var pos = 0;
+        for (var k = 0; k < chunks.length; k++) {
+          fileData.set(chunks[k], pos);
+          pos += chunks[k].length;
+        }
+      }
+    } catch(e) {
+      console.warn('Ошибка распаковки файла', name, e);
+    }
+
+    if (fileData) files.push({ name: name, data: fileData });
+    offset += 46 + nameLen + extraLen + commentLen;
+  }
+
+  return files;
+}
+
+
+/* ============================================================
+   UI ЛОГИКА
+   ============================================================ */
+(function(){
+  var K_THEME = 'qr_theme_v1';
+  var tabs       = document.querySelectorAll('.tab');
+  var panelText  = document.getElementById('panel-text');
+  var panelFile  = document.getElementById('panel-file');
+  var panelB64   = document.getElementById('panel-base64');
+  var panelZip   = document.getElementById('panel-zip');
+  var optsEl     = document.getElementById('opts');
+  var textInput  = document.getElementById('textInput');
+  var dropLabel  = document.getElementById('dropLabel');
+  var fileInput  = document.getElementById('fileInput');
+  var fileInfo   = document.getElementById('fileInfo');
+  var fileUrlMode = document.getElementById('fileUrlMode');
+  var sizeSel    = document.getElementById('sizeSel');
+  var eclSel     = document.getElementById('eclSel');
+  var genBtn     = document.getElementById('genBtn');
+  var canvas     = document.getElementById('canvas');
+  var canvasWrap = document.getElementById('canvasWrap');
+  var statusEl   = document.getElementById('status');
+  var dlBtn      = document.getElementById('dlBtn');
+  var hint       = document.getElementById('hint');
+  var toastEl    = document.getElementById('toast');
+  var themeBtn   = document.getElementById('theme-toggle');
+  var metaTheme  = document.getElementById('meta-theme');
+  var incomingBanner = document.getElementById('incomingBanner');
+
+  var mode = 'text';
+  var payload = null;
+  var fileName = 'qr-code';
+
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function downloadBlob(blob, filename, mime){
+    mime = mime || blob.type || 'application/octet-stream';
+    var file = null;
+    try { file = new File([blob], filename, { type: mime }); } catch(e){}
+    
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })){
+      navigator.share({ files: [file], title: filename }).catch(function(err){
+        if (err && err.name !== 'AbortError') fallbackDownload(blob, filename);
+      });
+      return;
+    }
+    fallbackDownload(blob, filename);
+  }
+
+  function fallbackDownload(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; a.rel = 'noopener'; a.style.display = 'none';
+    document.body.appendChild(a);
+    try { a.click(); } catch(e){ window.open(url, '_blank'); }
+    setTimeout(function(){
+      URL.revokeObjectURL(url);
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 1500);
+  }
+
+  function b64urlEncode(s){
+    return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+  }
+  function b64urlDecode(s){
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return s;
+  }
+
+  function getShareBaseUrl(){
+    if (location.protocol === 'file:' || location.protocol === 'blob:') return null;
+    return location.origin + location.pathname;
+  }
+  function makeShareUrl(dataUrl, name){
+    var base = getShareBaseUrl();
+    if (!base) return null;
+    
+    var b64 = dataUrl;
+    if (dataUrl.indexOf('data:') === 0) {
+      var comma = dataUrl.indexOf(',');
+      if (comma !== -1) b64 = dataUrl.substring(comma + 1);
+    }
+    return base + '?b64=' + b64urlEncode(b64) + '&n=' + encodeURIComponent(name);
+  }
+
+  function applyTheme(t){
+    document.documentElement.classList.toggle('dark', t === 'dark');
+    themeBtn.textContent = t === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+    if (metaTheme) metaTheme.content = t === 'dark' ? '#1a1714' : '#ece2cd';
+    try { localStorage.setItem(K_THEME, t); } catch(e){}
+  }
+  var saved = 'light';
+  try { saved = localStorage.getItem(K_THEME) || 'light'; } catch(e){}
+  applyTheme(saved);
+  themeBtn.addEventListener('click', function(){
+    applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+  });
+
+  var toastTimer = null;
+  function showToast(t){
+    toastEl.textContent = t;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 3000);
+  }
+
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.classList.remove('active'); });
+      t.classList.add('active');
+      mode = t.dataset.tab;
+      panelText.classList.toggle('hidden', mode !== 'text');
+      panelFile.classList.toggle('hidden', mode !== 'file');
+      panelB64.classList.toggle('hidden', mode !== 'base64');
+      panelZip.classList.toggle('hidden', mode !== 'zip');
+      
+      var hideGen = (mode === 'base64' || mode === 'zip');
+      optsEl.style.display = hideGen ? 'none' : 'grid';
+      genBtn.style.display = hideGen ? 'none' : 'block';
+      setStatus('');
+    });
+  });
+
+  function bindDrop(label, input, onFile){
+    ['dragenter','dragover'].forEach(function(ev){
+      label.addEventListener(ev, function(e){ e.preventDefault(); label.classList.add('over'); });
+    });
+    ['dragleave','drop'].forEach(function(ev){
+      label.addEventListener(ev, function(e){ e.preventDefault(); label.classList.remove('over'); });
+    });
+    label.addEventListener('drop', function(e){
+      if (e.dataTransfer.files.length) {
+        if (e.dataTransfer.files.length > 1 && typeof onFile === 'function' && input.multiple) {
+          for (var i=0; i<e.dataTransfer.files.length; i++) onFile(e.dataTransfer.files[i]);
+        } else {
+          onFile(e.dataTransfer.files[0]);
+        }
+      }
+    });
+    input.addEventListener('change', function(){
+      if (input.files.length) {
+        if (input.multiple) {
+          for (var i=0; i<input.files.length; i++) onFile(input.files[i]);
+        } else {
+          onFile(input.files[0]);
+        }
+      }
+      input.value = '';
+    });
+  }
+  bindDrop(dropLabel, fileInput, handleFile);
+
+  /* ===== ФАЙЛ → QR ===== */
+  function handleFile(file){
+    fileName = file.name.replace(/\.[^.]+$/, '') || 'qr-code';
+    var reader = new FileReader();
+    reader.onload = function(){
+      payload = reader.result;
+      var bytes = payload.length;
+      fileInfo.innerHTML = '';
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      if (file.type.indexOf('image/') === 0){
+        var img = document.createElement('img'); img.src = payload; box.appendChild(img);
+      } else {
+        var ico = document.createElement('div'); ico.className = 'ico';
+        ico.textContent = (file.name.split('.').pop() || 'FILE').toUpperCase().substring(0,5);
+        box.appendChild(ico);
+      }
+      var meta = document.createElement('div'); meta.className = 'meta';
+      meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div>' +
+        '<div class="size">' + fmtSize(file.size) + ' · base64 ~' + fmtSize(bytes) + '</div>';
+      box.appendChild(meta);
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = 'Удалить';
+      removeBtn.onclick = function(){
+        payload = null;
+        fileInfo.innerHTML = '';
+        canvasWrap.classList.add('hidden');
+        dlBtn.classList.add('hidden');
+        setStatus('Файл удалён.', '');
+      };
+      box.appendChild(removeBtn);
+      fileInfo.appendChild(box);
+
+      if (bytes > 2600){
+        setStatus('Файл большой. Если QR-ссылка не создастся, снимите галочку.', 'warn');
+      } else {
+        setStatus('Файл загружен. Нажмите «Сгенерировать».', 'ok');
+      }
+    };
+    reader.onerror = function(){ setStatus('Не удалось прочитать файл.', 'err'); };
+    reader.readAsDataURL(file);
+  }
+
+  genBtn.addEventListener('click', function(){
+    var dataForQR;
+    if (mode === 'text'){
+      dataForQR = textInput.value;
+      fileName = 'qr-text';
+      if (!dataForQR || !dataForQR.trim()){ setStatus('Введите текст или ссылку.', 'err'); return; }
+    } else if (mode === 'file'){
+      if (!payload){ setStatus('Сначала выберите файл.', 'err'); return; }
+      if (fileUrlMode && fileUrlMode.checked){
+        var shareUrl = makeShareUrl(payload, fileName);
+        if (shareUrl === null){
+          setStatus('Сайт открыт локально (file://) — QR-ссылки не будут работать.', 'err');
+          return;
+        }
+        if (new Blob([shareUrl]).size > 2900){
+          setStatus('Слишком большой файл для ссылки. Снимите галочку или сожмите файл во вкладке ZIP.', 'err');
+          return;
+        }
+        dataForQR = shareUrl;
+      } else {
+        if (new Blob([payload]).size > 2900){
+          setStatus('Слишком большой для QR (макс ~2.9 КБ). Сожмите файл или загрузите в облако.', 'err');
+          return;
+        }
+        dataForQR = payload;
+      }
+    } else { return; }
+
+    genBtn.disabled = true;
+    setStatus('Генерация…');
+    setTimeout(function(){
+      try {
+        var qr = qrcode(0, eclSel.value);
+        qr.addData(dataForQR, 'Byte');
+        qr.make();
+        drawOnCanvas(qr, parseInt(sizeSel.value, 10));
+        canvasWrap.classList.remove('hidden');
+        dlBtn.classList.remove('hidden');
+        var info = (mode === 'file' && fileUrlMode && fileUrlMode.checked)
+          ? 'QR-ссылка готова'
+          : 'QR-код готов';
+        setStatus(info + ' · ' + qr.getModuleCount() + '×' + qr.getModuleCount(), 'ok');
+        showToast(info);
+      } catch (err){
+        canvasWrap.classList.add('hidden'); dlBtn.classList.add('hidden');
+        setStatus('Ошибка: ' + (err.message || err), 'err');
+      } finally { genBtn.disabled = false; }
+    }, 20);
+  });
+
+  function drawOnCanvas(qr, size){
+    var count = qr.getModuleCount(), margin = 4;
+    var total = count + margin * 2;
+    var cell = Math.max(1, Math.floor(size / total));
+    var real = cell * total;
+    canvas.width = real; canvas.height = real;
+    canvas.style.width = real + 'px';
+    canvas.style.height = real + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, real, real);
+    ctx.fillStyle = '#000000';
+    for (var r = 0; r < count; r++)
+      for (var c = 0; c < count; c++)
+        if (qr.isDark(r, c)) ctx.fillRect((c + margin) * cell, (r + margin) * cell, cell, cell);
+  }
+
+  dlBtn.addEventListener('click', function(){
+    var dataUrl = canvas.toDataURL('image/png');
+    var byteStr = atob(dataUrl.split(',')[1]);
+    var arr = new Uint8Array(byteStr.length);
+    for (var i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    var blob = new Blob([arr], { type: 'image/png' });
+    downloadBlob(blob, fileName + '-qr.png', 'image/png');
+  });
+
+  /* ===== BASE64 → ФАЙЛ ===== */
+  var b64DropLabel   = document.getElementById('b64DropLabel');
+  var b64FileInput   = document.getElementById('b64FileInput');
+  var b64FileInfo    = document.getElementById('b64FileInfo');
+  var b64Output      = document.getElementById('b64Output');
+  var b64CopyBtn     = document.getElementById('b64CopyBtn');
+  var b64SaveTxtBtn  = document.getElementById('b64SaveTxtBtn');
+  var b64UseQrBtn    = document.getElementById('b64UseQrBtn');
+  var b64UrlMode     = document.getElementById('b64UrlMode');
+  var b64SizeInfo    = document.getElementById('b64SizeInfo');
+  var b64Input       = document.getElementById('b64Input');
+  var b64LoadTxtBtn  = document.getElementById('b64LoadTxtBtn');
+  var b64TxtInput    = document.getElementById('b64TxtInput');
+  var b64ClearBtn    = document.getElementById('b64ClearBtn');
+  var b64CopyInputBtn= document.getElementById('b64CopyInputBtn');
+  var b64Filename    = document.getElementById('b64Filename');
+  var b64Ext         = document.getElementById('b64Ext');
+  var b64DownloadBtn = document.getElementById('b64DownloadBtn');
+  var b64QrFromInputBtn = document.getElementById('b64QrFromInputBtn');
+  var b64Preview     = document.getElementById('b64Preview');
+
+  var currentB64Blob = null;
+  var currentB64Mime = '';
+  var currentB64Ext  = 'bin';
+  var loadedFileName = 'file';
+  var b64Timer = null;
+
+  var EXT_MAP = {
+    'image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp',
+    'image/svg+xml':'svg','image/bmp':'bmp','image/x-icon':'ico','image/tiff':'tiff',
+    'image/heic':'heic','image/heif':'heif','image/avif':'avif',
+    'application/pdf':'pdf','application/json':'json','application/xml':'xml','application/xhtml+xml':'xhtml',
+    'application/javascript':'js','application/x-javascript':'js',
+    'text/plain':'txt','text/html':'html','text/css':'css','text/csv':'csv','text/xml':'xml','text/markdown':'md',
+    'application/zip':'zip','application/x-zip-compressed':'zip','application/x-rar-compressed':'rar','application/vnd.rar':'rar',
+    'application/x-7z-compressed':'7z','application/x-tar':'tar','application/gzip':'gz','application/x-gzip':'gz',
+    'audio/mpeg':'mp3','audio/mp3':'mp3','audio/wav':'wav','audio/x-wav':'wav','audio/mp4':'m4a','audio/x-m4a':'m4a',
+    'audio/aac':'aac','audio/ogg':'ogg','audio/flac':'flac','audio/x-flac':'flac','audio/webm':'weba','audio/opus':'opus',
+    'video/mp4':'mp4','video/x-m4v':'m4v','video/quicktime':'mov','video/x-msvideo':'avi','video/avi':'avi',
+    'video/x-matroska':'mkv','video/webm':'webm','video/mpeg':'mpg','video/3gpp':'3gp','video/x-flv':'flv','video/x-ms-wmv':'wmv',
+    'application/vnd.android.package-archive':'apk','application/xapk-package-archive':'xapk',
+    'application/x-msdownload':'exe','application/x-msdos-program':'exe','application/x-msi':'msi',
+    'application/x-deb':'deb','application/x-rpm':'rpm','application/x-sharedlib':'so',
+    'application/x-apple-diskimage':'dmg','application/x-ipa':'ipa','application/x-ios-app':'ipa',
+    'application/x-apple-ios-app':'ipa','application/vnd.apple.installer+xml':'mpkg',
+    'application/x-xar':'pkg','application/x-apple-pkg':'pkg','application/x-mach-binary':'macho',
+    'application/x-mach-o':'macho','application/x-executable':'bin','application/x-mobileprovision':'mobileprovision',
+    'application/x-apple-mobileprovision':'mobileprovision','application/x-apple-binary-plist':'plist','application/x-plist':'plist',
+    'application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx',
+    'application/vnd.ms-excel':'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'xlsx',
+    'application/vnd.ms-powerpoint':'ppt','application/vnd.openxmlformats-officedocument.presentationml.presentation':'pptx',
+    'application/vnd.oasis.opendocument.text':'odt','application/vnd.oasis.opendocument.spreadsheet':'ods',
+    'application/epub+zip':'epub','application/rtf':'rtf',
+    'application/x-shockwave-flash':'swf','font/ttf':'ttf','font/otf':'otf','font/woff':'woff','font/woff2':'woff2',
+    'application/wasm':'wasm','application/octet-stream':'bin'
+  };
+  function extFor(mime){
+    if (EXT_MAP[mime]) return EXT_MAP[mime];
+    var sub = (mime || '').split('/')[1] || 'bin';
+    return sub.replace(/[^a-z0-9]/gi,'').toLowerCase() || 'bin';
+  }
+
+  function sniffMime(bytes){
+    var n = bytes.length;
+    if (n >= 3 && bytes[0]===0xFF && bytes[1]===0xD8 && bytes[2]===0xFF) return 'image/jpeg';
+    if (n >= 8 && bytes[0]===0x89 && bytes[1]===0x50 && bytes[2]===0x4E && bytes[3]===0x47) return 'image/png';
+    if (n >= 6 && bytes[0]===0x47 && bytes[1]===0x49 && bytes[2]===0x46 && bytes[3]===0x38) return 'image/gif';
+    if (n >= 2 && bytes[0]===0x42 && bytes[1]===0x4D) return 'image/bmp';
+    if (n >= 4 && bytes[0]===0x25 && bytes[1]===0x50 && bytes[2]===0x44 && bytes[3]===0x46) return 'application/pdf';
+    if (n >= 4 && bytes[0]===0x78 && bytes[1]===0x61 && bytes[2]===0x72 && bytes[3]===0x21) return 'application/x-xar';
+    if (n >= 4){
+      var m0=bytes[0],m1=bytes[1],m2=bytes[2],m3=bytes[3];
+      if ((m0===0xCF&&m1===0xFA&&m2===0xED&&m3===0xFE) || (m0===0xCE&&m1===0xFA&&m2===0xED&&m3===0xFE) ||
+          (m0===0xFE&&m1===0xED&&m2===0xFA&&m3===0xCE) || (m0===0xFE&&m1===0xED&&m2===0xFA&&m3===0xCF)) {
+        return 'application/x-mach-binary';
+      }
+      if (m0===0xCA&&m1===0xFE&&m2===0xBA&&m3===0xBE) return 'application/x-mach-binary';
+    }
+    if (n >= 512){
+      var koly = n - 512;
+      if (bytes[koly]===0x6B && bytes[koly+1]===0x6F && bytes[koly+2]===0x6C && bytes[koly+3]===0x79){
+        return 'application/x-apple-diskimage';
+      }
+    }
+    if (n >= 30 && bytes[0]===0x50 && bytes[1]===0x4B &&
+        (bytes[2]===0x03 || bytes[2]===0x05 || bytes[2]===0x07) &&
+        (bytes[3]===0x04 || bytes[3]===0x06 || bytes[3]===0x08)){
+      var peek = '', limit = Math.min(n, 4096);
+      for (var i = 0; i < limit; i++){
+        var b = bytes[i];
+        if (b >= 32 && b < 127) peek += String.fromCharCode(b);
+        else if (b === 0) peek += '|';
+      }
+      if (peek.indexOf('Payload/') >= 0) return 'application/x-ipa';
+      if (peek.indexOf('AndroidManifest.xml') >= 0){
+        if (peek.indexOf('manifest.json') >= 0 || peek.indexOf('.apk') >= 0) return 'application/xapk-package-archive';
+        return 'application/vnd.android.package-archive';
+      }
+      if (peek.indexOf('[Content_Types].xml') >= 0){
+        if (peek.indexOf('word/') >= 0) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        if (peek.indexOf('xl/') >= 0) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        if (peek.indexOf('ppt/') >= 0) return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      }
+      return 'application/zip';
+    }
+    if (n >= 12 && bytes[0]===0x52 && bytes[1]===0x49 && bytes[2]===0x46 && bytes[3]===0x46){
+      var tag = String.fromCharCode(bytes[8],bytes[9],bytes[10],bytes[11]);
+      if (tag === 'WEBP') return 'image/webp';
+      if (tag === 'WAVE') return 'audio/wav';
+      if (tag === 'AVI ') return 'video/x-msvideo';
+    }
+    if (n >= 12 && bytes[4]===0x66 && bytes[5]===0x74 && bytes[6]===0x79 && bytes[7]===0x70){
+      var brand = String.fromCharCode(bytes[8],bytes[9],bytes[10],bytes[11]);
+      if (brand.indexOf('qt') === 0) return 'video/quicktime';
+      if (brand.indexOf('M4A') === 0 || brand.indexOf('M4B') === 0) return 'audio/mp4';
+      if (brand.indexOf('M4V') === 0) return 'video/x-m4v';
+      if (brand.indexOf('3gp') === 0) return 'video/3gpp';
+      return 'video/mp4';
+    }
+    if (n >= 3 && bytes[0]===0x49 && bytes[1]===0x44 && bytes[2]===0x33) return 'audio/mpeg';
+    if (n >= 2 && bytes[0]===0xFF && (bytes[1]===0xFB||bytes[1]===0xF3||bytes[1]===0xF2||bytes[1]===0xFA)) return 'audio/mpeg';
+    if (n >= 4 && bytes[0]===0x66 && bytes[1]===0x4C && bytes[2]===0x61 && bytes[3]===0x43) return 'audio/flac';
+    if (n >= 4 && bytes[0]===0x4F && bytes[1]===0x67 && bytes[2]===0x67 && bytes[3]===0x53) return 'audio/ogg';
+    if (n >= 4 && bytes[0]===0x1A && bytes[1]===0x45 && bytes[2]===0xDF && bytes[3]===0xA3) return 'video/webm';
+    if (n >= 6 && bytes[0]===0x52 && bytes[1]===0x61 && bytes[2]===0x72 && bytes[3]===0x21) return 'application/vnd.rar';
+    if (n >= 6 && bytes[0]===0x37 && bytes[1]===0x7A && bytes[2]===0xBC && bytes[3]===0xAF &&
+        bytes[4]===0x27 && bytes[5]===0x1C) return 'application/x-7z-compressed';
+    if (n >= 2 && bytes[0]===0x1F && bytes[1]===0x8B) return 'application/gzip';
+    if (n >= 2 && bytes[0]===0x4D && bytes[1]===0x5A) return 'application/x-msdownload';
+    if (n >= 6 && bytes[0]===0x62 && bytes[1]===0x70 && bytes[2]===0x6C && bytes[3]===0x69 &&
+        bytes[4]===0x73 && bytes[5]===0x74) return 'application/x-plist';
+    return null;
+  }
+
+  function looksLikeText(bytes){
+    var n = Math.min(bytes.length, 512);
+    if (n === 0) return false;
+    for (var i = 0; i < n; i++){
+      var b = bytes[i];
+      if (b === 9 || b === 10 || b === 13) continue;
+      if (b < 32 || b > 126){ if (b < 0xC0) return false; }
+    }
+    return true;
+  }
+
+  function parseB64(str){
+    str = str.trim();
+    var mime = '', b64 = str;
+    if (str.indexOf('data:') === 0){
+      var comma = str.indexOf(',');
+      if (comma !== -1){
+        var meta = str.substring(5, comma);
+        b64 = str.substring(comma + 1);
+        var semi = meta.indexOf(';');
+        mime = semi >= 0 ? (meta.substring(0, semi) || '') : (meta || '');
+      }
+    }
+    
+    b64 = b64.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    
+    var binary;
+    try { binary = atob(b64); } catch(e){ throw new Error('Неверный base64'); }
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    
+    if (!mime || mime === 'application/octet-stream'){
+      var sniffed = sniffMime(bytes);
+      if (sniffed) mime = sniffed;
+      else if (looksLikeText(bytes)) mime = 'text/plain';
+      else mime = 'application/octet-stream';
+    }
+    return { mime: mime, bytes: bytes, blob: new Blob([bytes], { type: mime }) };
+  }
+
+  bindDrop(b64DropLabel, b64FileInput, handleB64File);
+
+  function handleB64File(file){
+    loadedFileName = file.name.replace(/\.[^.]+$/, '') || 'file';
+    if (file.size > 20 * 1024 * 1024) showToast('Большой файл — может занять время');
+
+    var r = new FileReader();
+    r.onload = function(){
+      b64Output.value = r.result;
+      b64FileInfo.innerHTML = '';
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      if (file.type.indexOf('image/') === 0){
+        var img = document.createElement('img'); img.src = r.result; box.appendChild(img);
+      } else {
+        var ico = document.createElement('div'); ico.className = 'ico';
+        ico.textContent = (file.name.split('.').pop() || 'FILE').toUpperCase().substring(0,5);
+        box.appendChild(ico);
+      }
+      var meta = document.createElement('div'); meta.className = 'meta';
+      var b64len = r.result.length;
+      var note;
+      if (b64len <= 2600) note = 'подходит для QR';
+      else if (b64len <= 2900) note = 'на грани, может не влезть';
+      else note = 'слишком длинно — используйте QR-ссылку';
+      meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div>' +
+        '<div class="size">' + fmtSize(file.size) + ' → ' + fmtSize(b64len) + ' base64 · ' + note + '</div>';
+      box.appendChild(meta);
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = 'Удалить';
+      removeBtn.onclick = function(){
+        b64Output.value = '';
+        b64FileInfo.innerHTML = '';
+        b64SizeInfo.textContent = '';
+        showToast('Файл удалён');
+      };
+      box.appendChild(removeBtn);
+      b64FileInfo.appendChild(box);
+      b64SizeInfo.textContent = 'Base64 готов · ' + fmtSize(b64len) + ' · ' + note;
+      showToast('Base64 получен');
+    };
+    r.onerror = function(){ showToast('Ошибка чтения'); };
+    r.readAsDataURL(file);
+  }
+
+  b64CopyBtn.addEventListener('click', function(){
+    if (!b64Output.value){ showToast('Сначала загрузите файл'); return; }
+    copyText(b64Output.value);
+  });
+
+  b64SaveTxtBtn.addEventListener('click', function(){
+    if (!b64Output.value){ showToast('Сначала загрузите файл'); return; }
+    var blob = new Blob([b64Output.value], { type: 'text/plain;charset=utf-8' });
+    downloadBlob(blob, (loadedFileName || 'file') + '.base64.txt', 'text/plain');
+  });
+
+  b64UseQrBtn.addEventListener('click', function(){
+    if (!b64Output.value){ showToast('Сначала загрузите файл'); return; }
+    var dataForQR = b64Output.value;
+    if (b64UrlMode && b64UrlMode.checked){
+      var shareUrl = makeShareUrl(dataForQR, loadedFileName);
+      if (shareUrl === null){ showToast('Сайт открыт локально — ссылки не работают'); return; }
+      if (new Blob([shareUrl]).size > 2900){ showToast('Для QR-ссылки слишком длинно. Снимите галочку или сожмите файл.'); return; }
+      dataForQR = shareUrl;
+    } else {
+      if (new Blob([dataForQR]).size > 2900){ showToast('Слишком длинно для QR-данных'); return; }
+    }
+    useInQr(dataForQR);
+  });
+
+  function cleanFilename(raw){
+    var s = (raw || 'decoded').trim();
+    s = s.replace(/\.[a-zA-Z0-9]{1,6}$/, '');
+    s = s.replace(/[\\/:*?"<>|]/g, '_');
+    return s || 'decoded';
+  }
+  function cleanExt(raw){
+    var e = (raw || 'bin').trim().replace(/^\./, '');
+    return e.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'bin';
+  }
+  function currentExt(){
+    return cleanExt(b64Ext.value) || currentB64Ext || 'bin';
+  }
+
+  function updateDownloadBtnText(){
+    if (!currentB64Blob) return;
+    b64DownloadBtn.textContent = 'Скачать ' + cleanFilename(b64Filename.value) + '.' + currentExt();
+  }
+
+  function updateB64Decode(){
+    var raw = b64Input.value.trim();
+    if (!raw){
+      b64Preview.innerHTML = '';
+      b64DownloadBtn.disabled = true;
+      b64QrFromInputBtn.disabled = true;
+      currentB64Blob = null;
+      b64Ext.dataset.auto = 'true';
+      return;
+    }
+    try {
+      var res = parseB64(raw);
+      currentB64Blob = res.blob;
+      currentB64Mime = res.mime;
+      currentB64Ext  = extFor(res.mime);
+
+      if (b64Ext.dataset.auto !== 'false'){
+        b64Ext.value = currentB64Ext;
+        b64Ext.dataset.auto = 'true';
+      }
+
+      b64DownloadBtn.disabled = false;
+      updateDownloadBtnText();
+
+      var b64Len = new Blob([raw]).size;
+      b64QrFromInputBtn.disabled = (b64Len > 2900);
+
+      var html = '';
+      var url = URL.createObjectURL(res.blob);
+
+      if (res.mime.indexOf('image/') === 0){
+        html += '<img src="' + url + '" alt="preview">';
+      } else if (res.mime.indexOf('video/') === 0){
+        html += '<video src="' + url + '" controls preload="metadata"></video>';
+      } else if (res.mime.indexOf('audio/') === 0){
+        html += '<audio src="' + url + '" controls preload="metadata"></audio>';
+      } else if (res.mime === 'application/pdf'){
+        html += '<div class="hint-foot" style="text-align:left;margin:0 0 12px">PDF — предпросмотр недоступен, но скачать можно.</div>';
+      } else if (res.mime.indexOf('text/') === 0 || res.mime === 'application/json'){
+        try {
+          var txt = new TextDecoder('utf-8').decode(res.bytes.slice(0, 800));
+          html += '<pre>' + escapeHtml(txt) + (res.bytes.length > 800 ? '\n…' : '') + '</pre>';
+        } catch(e){}
+      }
+
+      html += '<div class="file-info">' +
+        '<div class="ico">' + currentExt().toUpperCase().substring(0,5) + '</div>' +
+        '<div class="meta">' +
+          '<div class="name">' + escapeHtml(res.mime) + '</div>' +
+          '<div class="size">' + fmtSize(res.blob.size) + ' · .' + currentExt() + '</div>' +
+        '</div>' +
+      '</div>';
+
+      if (b64Len > 2900){
+        html += '<div class="warn-box">Файл больше лимита QR (2.9 КБ) — скачать можно, а в QR-код не поместится.</div>';
+      }
+
+      b64Preview.innerHTML = html;
+    } catch (e){
+      b64Preview.innerHTML = '<div class="status err">Ошибка: ' + escapeHtml(e.message || 'некорректный base64') + '</div>';
+      b64DownloadBtn.disabled = true;
+      b64QrFromInputBtn.disabled = true;
+      currentB64Blob = null;
+    }
+  }
+
+  b64Input.addEventListener('input', function(){
+    clearTimeout(b64Timer);
+    b64Timer = setTimeout(updateB64Decode, 200);
+  });
+  b64Input.addEventListener('paste', function(){ 
+    clearTimeout(b64Timer);
+    setTimeout(updateB64Decode, 30); 
+  });
+
+  b64Filename.addEventListener('input', updateDownloadBtnText);
+  b64Ext.addEventListener('input', function(){ this.dataset.auto = 'false'; updateDownloadBtnText(); });
+
+  b64DownloadBtn.addEventListener('click', function(){
+    if (!currentB64Blob) return;
+    downloadBlob(currentB64Blob, cleanFilename(b64Filename.value) + '.' + currentExt(), currentB64Mime || 'application/octet-stream');
+  });
+
+  b64QrFromInputBtn.addEventListener('click', function(){
+    if (!b64Input.value.trim()) return;
+    if (new Blob([b64Input.value]).size > 2900){ showToast('Слишком длинно для QR'); return; }
+    useInQr(b64Input.value.trim());
+  });
+
+  b64CopyInputBtn.addEventListener('click', function(){
+    if (!b64Input.value.trim()){ showToast('Поле пустое'); return; }
+    copyText(b64Input.value.trim());
+  });
+
+  b64LoadTxtBtn.addEventListener('click', function(){ b64TxtInput.click(); });
+  b64TxtInput.addEventListener('change', function(){
+    if (!b64TxtInput.files.length) return;
+    var f = b64TxtInput.files[0];
+    var r = new FileReader();
+    r.onload = function(){
+      var text = String(r.result || '');
+      var lines = text.split(/\r?\n/);
+      var found = null;
+      for (var i = 0; i < lines.length; i++){
+        var L = lines[i].trim();
+        if (!L) continue;
+        if (L.indexOf('data:') === 0 || /^[A-Za-z0-9+/=]{40,}$/.test(L)){ found = L; break; }
+      }
+      b64Input.value = (found || text).trim();
+      updateB64Decode();
+      showToast('Загружено: ' + f.name);
+    };
+    r.onerror = function(){ showToast('Ошибка чтения файла'); };
+    r.readAsText(f);
+    b64TxtInput.value = '';
+  });
+
+  b64ClearBtn.addEventListener('click', function(){
+    b64Input.value = '';
+    b64Preview.innerHTML = '';
+    b64DownloadBtn.disabled = true;
+    b64QrFromInputBtn.disabled = true;
+    currentB64Blob = null;
+    b64Ext.value = 'bin';
+    b64Ext.dataset.auto = 'true';
+    if (incomingBanner) incomingBanner.classList.add('hidden');
+    if (location.search.indexOf('b64=') >= 0){
+      try { history.replaceState(null, '', location.pathname); } catch(e){}
+    }
+    showToast('Очищено');
+  });
+
+  /* ===== ZIP: переключение режимов ===== */
+  var zipMode = 'pack';
+  document.querySelectorAll('.zip-mode').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.zip-mode').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+      zipMode = this.dataset.mode;
+      document.getElementById('zip-pack').classList.toggle('hidden', zipMode !== 'pack');
+      document.getElementById('zip-unpack').classList.toggle('hidden', zipMode !== 'unpack');
+      document.getElementById('zip-compress').classList.toggle('hidden', zipMode !== 'compress');
+    });
+  });
+
+  /* ===== ZIP: упаковать ===== */
+  var zipDropLabel = document.getElementById('zipDropLabel');
+  var zipFileInput = document.getElementById('zipFileInput');
+  var zipFileList  = document.getElementById('zipFileList');
+  var zipActions   = document.getElementById('zipActions');
+  var createZipBtn = document.getElementById('createZipBtn');
+  var zipFiles = [];
+
+  bindDrop(zipDropLabel, zipFileInput, function(file) {
+    zipFiles.push({ file: file });
+    renderZipList();
+  });
+
+  function renderZipList() {
+    zipFileList.innerHTML = '';
+    zipFiles.forEach(function(item, index) {
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      var ico = document.createElement('div');
+      ico.className = 'ico';
+      ico.textContent = (item.file.name.split('.').pop() || 'FILE').toUpperCase().substring(0,5);
+      box.appendChild(ico);
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = '<div class="name">' + escapeHtml(item.file.name) + '</div>' +
+        '<div class="size">' + fmtSize(item.file.size) + '</div>';
+      box.appendChild(meta);
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = 'Удалить';
+      removeBtn.onclick = function() {
+        zipFiles.splice(index, 1);
+        renderZipList();
+      };
+      box.appendChild(removeBtn);
+      zipFileList.appendChild(box);
+    });
+    
+    zipActions.classList.toggle('hidden', zipFiles.length === 0);
+  }
+
+  createZipBtn.addEventListener('click', async function() {
+    if (zipFiles.length === 0) return;
+    createZipBtn.disabled = true;
+    createZipBtn.textContent = 'Создание...';
+    try {
+      var filesData = [];
+      for (var i = 0; i < zipFiles.length; i++) {
+        var ab = await zipFiles[i].file.arrayBuffer();
+        filesData.push({ name: zipFiles[i].file.name, data: new Uint8Array(ab) });
+      }
+      var zipBlob = await createZipBlob(filesData);
+      downloadBlob(zipBlob, 'archive.zip', 'application/zip');
+      showToast('ZIP создан');
+    } catch(e) {
+      console.error(e);
+      showToast('Ошибка при создании ZIP');
+    } finally {
+      createZipBtn.disabled = false;
+      createZipBtn.textContent = 'Создать ZIP-архив';
+    }
+  });
+
+  /* ===== ZIP: распаковать ===== */
+  var unzipDropLabel = document.getElementById('unzipDropLabel');
+  var unzipFileInput = document.getElementById('unzipFileInput');
+  var unzipFileList  = document.getElementById('unzipFileList');
+  var unzipFiles = [];
+
+  bindDrop(unzipDropLabel, unzipFileInput, async function(file) {
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      showToast('Нужен .zip файл');
+      return;
+    }
+    unzipFileList.innerHTML = '<div class="status">Распаковка...</div>';
+    try {
+      var files = await unzipBlob(file);
+      unzipFiles = files;
+      renderUnzipList();
+      showToast('Распаковано: ' + files.length + ' файлов');
+    } catch (e) {
+      unzipFileList.innerHTML = '<div class="status err">Ошибка: ' + escapeHtml(e.message) + '</div>';
+    }
+  });
+
+  function renderUnzipList() {
+    unzipFileList.innerHTML = '';
+    unzipFiles.forEach(function(item, index) {
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      
+      var ico = document.createElement('div');
+      ico.className = 'ico';
+      ico.textContent = (item.name.split('.').pop() || 'FILE').toUpperCase().substring(0,5);
+      box.appendChild(ico);
+      
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = '<div class="name">' + escapeHtml(item.name) + '</div>' +
+        '<div class="size">' + fmtSize(item.data.length) + '</div>';
+      box.appendChild(meta);
+      
+      var dlBtn = document.createElement('button');
+      dlBtn.className = 'btn-sm gold';
+      dlBtn.style.padding = '6px 10px';
+      dlBtn.style.fontSize = '10px';
+      dlBtn.style.marginLeft = 'auto';
+      dlBtn.textContent = 'Скачать';
+      dlBtn.onclick = function() {
+        var blob = new Blob([item.data]);
+        downloadBlob(blob, item.name);
+      };
+      box.appendChild(dlBtn);
+      
+      unzipFileList.appendChild(box);
+    });
+    
+    if (unzipFiles.length > 0) {
+      var allBtn = document.createElement('button');
+      allBtn.className = 'btn-primary';
+      allBtn.style.marginTop = '12px';
+      allBtn.textContent = 'Скачать все (' + unzipFiles.length + ')';
+      allBtn.onclick = async function() {
+        var filesData = unzipFiles.map(function(f) { return { name: f.name, data: f.data }; });
+        var blob = await createZipBlob(filesData);
+        downloadBlob(blob, 'extracted.zip');
+      };
+      unzipFileList.appendChild(allBtn);
+    }
+  }
+
+  /* ===== ZIP: сжать фото ===== */
+  var compressDropLabel = document.getElementById('compressDropLabel');
+  var compressFileInput = document.getElementById('compressFileInput');
+  var compressFileInfo = document.getElementById('compressFileInfo');
+  var compressOptions = document.getElementById('compressOptions');
+  var compressFormat = document.getElementById('compressFormat');
+  var qualityOpt = document.getElementById('qualityOpt');
+  var qualityRange = document.getElementById('qualityRange');
+  var qualityValue = document.getElementById('qualityValue');
+  var compressBtn = document.getElementById('compressBtn');
+  var compressFile = null;
+
+  bindDrop(compressDropLabel, compressFileInput, function(file) {
+    compressFile = file;
+    compressFileInfo.innerHTML = '';
+    var box = document.createElement('div');
+    box.className = 'file-info';
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    box.appendChild(img);
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div>' +
+      '<div class="size">' + fmtSize(file.size) + '</div>';
+    box.appendChild(meta);
+    compressFileInfo.appendChild(box);
+    compressOptions.classList.remove('hidden');
+  });
+
+  compressFormat.addEventListener('change', function() {
+    qualityOpt.style.display = (this.value === 'png') ? 'none' : 'flex';
+  });
+
+  qualityRange.addEventListener('input', function() {
+    qualityValue.textContent = this.value + '%';
+  });
+
+  compressBtn.addEventListener('click', function() {
+    if (!compressFile) return;
+    var format = compressFormat.value;
+    var quality = parseInt(qualityRange.value, 10) / 100;
+    
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      var mime = 'image/' + format;
+      var ext = format === 'jpeg' ? 'jpg' : format;
+      
+      canvas.toBlob(function(blob) {
+        if (!blob) {
+          showToast('Ошибка сжатия');
+          return;
+        }
+        var origSize = compressFile.size;
+        var newSize = blob.size;
+        var diff = ((1 - newSize / origSize) * 100).toFixed(0);
+        
+        downloadBlob(blob, compressFile.name.replace(/\.[^.]+$/, '') + '.' + ext, mime);
+        showToast('Сжато: ' + fmtSize(origSize) + ' → ' + fmtSize(newSize) + ' (-' + diff + '%)');
+      }, mime, quality);
+    };
+    img.onerror = function() {
+      showToast('Ошибка загрузки фото');
+    };
+    img.src = URL.createObjectURL(compressFile);
+  });
+
+  /* ===== УТИЛИТЫ ===== */
+  function useInQr(text){
+    document.querySelector('.tab[data-tab="text"]').click();
+    textInput.value = text;
+    setTimeout(function(){ genBtn.click(); }, 30);
+  }
+
+  function copyText(text){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ showToast('Скопировано'); })
+        .catch(function(){ fallbackCopy(text); });
+    } else fallbackCopy(text);
+  }
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('Скопировано'); }
+    catch(e){ showToast('Не удалось скопировать'); }
+    document.body.removeChild(ta);
+  }
+
+  function setStatus(msg, cls){
+    statusEl.textContent = msg;
+    statusEl.className = 'status' + (cls ? ' ' + cls : '');
+  }
+  function fmtSize(b){
+    if (b < 1024) return b + ' Б';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' КБ';
+    if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(2) + ' МБ';
+    return (b / 1024 / 1024 / 1024).toFixed(2) + ' ГБ';
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && mode === 'text') genBtn.click();
+  });
+
+  var titleEl = document.getElementById('title');
+  var clicks = 0;
+  titleEl.addEventListener('click', function(){
+    clicks++;
+    titleEl.style.letterSpacing = (0.14 + (clicks % 6) * 0.02) + 'em';
+    setTimeout(function(){ titleEl.style.letterSpacing = '0.14em'; }, 200);
+    if (clicks === 7) showToast('Привет из «ХАХАХА»');
+  });
+
+  /* ============================================================
+     АВТО-ОБРАБОТКА ВХОДЯЩЕЙ QR-ССЫЛКИ
+     ============================================================ */
+  (function checkIncoming(){
+    var urlParams = new URLSearchParams(window.location.search);
+    var hash = window.location.hash.substring(1);
+    var hashParams = new URLSearchParams(hash);
+
+    var b64 = urlParams.get('b64') || hashParams.get('b64');
+    var nm = urlParams.get('n') || hashParams.get('n');
+
+    if (!b64) return;
+
+    try { history.replaceState(null, '', location.pathname); } catch(e){}
+
+    setTimeout(function(){
+      document.querySelector('.tab[data-tab="base64"]').click();
+      
+      clearTimeout(b64Timer);
+      b64Input.value = b64;
+      
+      if (nm && b64Filename) b64Filename.value = decodeURIComponent(nm).replace(/\.[^.]+$/, '');
+      b64Ext.dataset.auto = 'true';
+      
+      updateB64Decode();
+
+      if (incomingBanner) {
+          incomingBanner.classList.remove('hidden');
+          incomingBanner.textContent = "Данные получены. Файл готов.";
+      }
+
+      setTimeout(function(){
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(b64).catch(function(){});
+          }
+          if (currentB64Blob) {
+              var name = cleanFilename(b64Filename.value) + '.' + currentExt();
+              downloadBlob(currentB64Blob, name, currentB64Mime);
+          }
+        } catch(e){}
+        b64Preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }, 100);
+  })();
+})();
+</script>
+</body>
+</html>
