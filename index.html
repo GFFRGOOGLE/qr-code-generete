@@ -36,8 +36,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
 .card{background:var(--paper);border:1px solid var(--frame);padding:22px;box-shadow:4px 4px 0 rgba(58,44,28,.22);position:relative}
 .card::before{content:'';position:absolute;inset:5px;border:1px solid var(--frame);pointer-events:none;opacity:.25}
 .card>*{position:relative;z-index:1}
-.tabs{display:flex;border:1px solid var(--frame);background:var(--card);margin-bottom:20px;overflow-x:auto}
-.tab{flex:1;min-width:0;padding:13px 6px;background:transparent;border:none;border-right:1px solid var(--frame);color:var(--ink-soft);font-family:'Courier New',monospace;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;transition:background .15s,color .15s}
+.tabs{display:flex;border:1px solid var(--frame);background:var(--card);margin-bottom:20px;overflow-x:auto;flex-wrap:nowrap}
+.tab{flex:1;min-width:90px;padding:13px 6px;background:transparent;border:none;border-right:1px solid var(--frame);color:var(--ink-soft);font-family:'Courier New',monospace;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;transition:background .15s,color .15s}
 .tab:last-child{border-right:none}
 .tab.active{background:var(--paper-d);color:var(--seal);box-shadow:inset 0 -2px 0 var(--seal)}
 .section-title{font-family:'Courier New',monospace;font-size:11px;color:var(--ink);letter-spacing:.2em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:10px;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid var(--frame);flex-wrap:wrap}
@@ -104,13 +104,14 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .warn-box{font-family:'Courier New',monospace;font-size:10.5px;color:var(--seal);background:rgba(139,32,25,.08);border:1px solid var(--seal);padding:9px 12px;margin-top:10px;line-height:1.4}
 .incoming-banner{font-family:'Courier New',monospace;font-size:10.5px;color:var(--ok);background:rgba(74,122,60,.1);border:1px solid var(--ok);padding:10px 12px;margin-bottom:14px;line-height:1.4;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
 @media(max-width:520px){
   body{padding:16px}
   .frame{inset:8px}
   .card{padding:16px}
   .hdr h1{font-size:22px;letter-spacing:.08em}
   .ctl-btn{padding:6px 10px;font-size:10px}
-  .tab{padding:11px 4px;font-size:9.5px;letter-spacing:0}
+  .tab{padding:11px 4px;font-size:9px;letter-spacing:0;min-width:70px}
   .opts{grid-template-columns:1fr;gap:8px}
   .btn-sm{padding:10px 14px;font-size:10px}
   .filename-row .ext-input{width:70px}
@@ -135,8 +136,10 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
       <button class="tab active" data-tab="text">Текст</button>
       <button class="tab" data-tab="file">Файл</button>
       <button class="tab" data-tab="base64">Base64</button>
+      <button class="tab" data-tab="zip">ZIP / Сжать</button>
     </div>
 
+    <!-- TEXT -->
     <div id="panel-text">
       <div class="section-title">Введите текст <span class="hint">или URL</span></div>
       <div class="field-row">
@@ -144,6 +147,7 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
       </div>
     </div>
 
+    <!-- FILE -->
     <div id="panel-file" class="hidden">
       <div class="section-title">Загрузите файл <span class="hint">до ~2.2 КБ для QR</span></div>
       <label class="drop" for="fileInput" id="dropLabel">
@@ -162,6 +166,7 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
       </label>
     </div>
 
+    <!-- BASE64 -->
     <div id="panel-base64" class="hidden">
       <div class="section-title">Файл → Base64 <span class="hint">любой файл</span></div>
 
@@ -228,6 +233,33 @@ canvas{display:block;max-width:100%;height:auto;background:#fff}
       <div id="b64Preview" class="b64-preview"></div>
     </div>
 
+    <!-- ZIP / СЖАТЬ -->
+    <div id="panel-zip" class="hidden">
+      <div class="section-title">Архиватор <span class="hint">ZIP или сжатие</span></div>
+      <label class="drop" for="zipFileInput" id="zipDropLabel">
+        <b>Нажмите</b> или перетащите файлы<br>
+        <span class="sub">Можно выбрать несколько файлов сразу</span>
+      </label>
+      <input type="file" id="zipFileInput" class="file-hidden" multiple>
+      
+      <div id="zipFileList" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+      
+      <div id="zipActions" class="hidden" style="margin-top:16px">
+        <button class="btn-primary" id="createZipBtn">Создать ZIP-архив</button>
+      </div>
+
+      <div id="compressSection" class="hidden" style="margin-top:20px; border-top:1px dashed var(--frame); padding-top:16px;">
+         <div class="section-title">Сжать изображение <span class="hint">уменьшить размер JPG/PNG</span></div>
+         <div class="field-row">
+            <div class="lbl">Качество (10-100%)</div>
+            <input type="range" id="qualityRange" min="10" max="100" value="60">
+            <div style="text-align:right; font-family:monospace; font-size:12px;" id="qualityValue">60%</div>
+         </div>
+         <button class="btn-sm seal" id="compressBtn">Сжать и скачать</button>
+      </div>
+    </div>
+
+    <!-- ОБЩИЕ НАСТРОЙКИ -->
     <div class="opts" id="opts">
       <div class="opt">
         <label>Размер</label>
@@ -675,14 +707,123 @@ var qrcode = (function(){
   };
 })();
 
+/* ============================================================
+   ZIP-АРХИВАТОР (Собственная реализация, без библиотек)
+   ============================================================ */
+var crcTable = new Uint32Array(256);
+for (var i = 0; i < 256; i++) {
+  var c = i;
+  for (var j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+  crcTable[i] = c;
+}
+function crc32(data) {
+  var crc = -1;
+  for (var i = 0; i < data.length; i++) {
+    crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xFF];
+  }
+  return (crc ^ -1) >>> 0;
+}
 
-/* ===== UI ===== */
+async function createZipBlob(files) {
+  var encoder = new TextEncoder();
+  var parts = [];
+  var centralParts = [];
+  var offset = 0;
+
+  for (var f = 0; f < files.length; f++) {
+    var file = files[f];
+    var nameBytes = encoder.encode(file.name);
+    var data = file.data;
+    var crc = crc32(data);
+    var size = data.length;
+    var compData = data;
+    var compSize = size;
+    var method = 0; // 0 = Store
+
+    try {
+      if (typeof CompressionStream !== 'undefined') {
+        var stream = new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+        compData = new Uint8Array(await new Response(stream).arrayBuffer());
+        compSize = compData.length;
+        method = 8; // 8 = Deflate
+        if (compSize >= size) {
+          compData = data;
+          compSize = size;
+          method = 0;
+        }
+      }
+    } catch(e) { console.warn('Compression failed, storing raw', e); }
+
+    // Local File Header
+    var header = new Uint8Array(30 + nameBytes.length);
+    var view = new DataView(header.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0x0800, true); // UTF-8
+    view.setUint16(8, method, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint32(14, crc, true);
+    view.setUint32(18, compSize, true);
+    view.setUint32(22, size, true);
+    view.setUint16(26, nameBytes.length, true);
+    view.setUint16(28, 0, true);
+    header.set(nameBytes, 30);
+    parts.push(header, compData);
+
+    // Central Directory
+    var central = new Uint8Array(46 + nameBytes.length);
+    var cView = new DataView(central.buffer);
+    cView.setUint32(0, 0x02014b50, true);
+    cView.setUint16(4, 20, true);
+    cView.setUint16(6, 20, true);
+    cView.setUint16(8, 0x0800, true);
+    cView.setUint16(10, method, true);
+    cView.setUint16(12, 0, true);
+    cView.setUint16(14, 0, true);
+    cView.setUint32(16, crc, true);
+    cView.setUint32(20, compSize, true);
+    cView.setUint32(24, size, true);
+    cView.setUint16(28, nameBytes.length, true);
+    cView.setUint16(30, 0, true);
+    cView.setUint16(32, 0, true);
+    cView.setUint16(34, 0, true);
+    cView.setUint16(36, 0, true);
+    cView.setUint32(38, 0, true);
+    cView.setUint32(42, offset, true);
+    central.set(nameBytes, 46);
+    centralParts.push(central);
+    offset += header.length + compData.length;
+  }
+
+  var centralSize = 0;
+  for (var i = 0; i < centralParts.length; i++) centralSize += centralParts[i].length;
+
+  var eocd = new Uint8Array(22);
+  var eView = new DataView(eocd.buffer);
+  eView.setUint32(0, 0x06054b50, true);
+  eView.setUint16(4, 0, true);
+  eView.setUint16(6, 0, true);
+  eView.setUint16(8, files.length, true);
+  eView.setUint16(10, files.length, true);
+  eView.setUint32(12, centralSize, true);
+  eView.setUint32(16, offset, true);
+  eView.setUint16(20, 0, true);
+
+  return new Blob([...parts, ...centralParts, eocd], { type: 'application/zip' });
+}
+
+
+/* ============================================================
+   UI ЛОГИКА
+   ============================================================ */
 (function(){
   var K_THEME = 'qr_theme_v1';
   var tabs       = document.querySelectorAll('.tab');
   var panelText  = document.getElementById('panel-text');
   var panelFile  = document.getElementById('panel-file');
   var panelB64   = document.getElementById('panel-base64');
+  var panelZip   = document.getElementById('panel-zip');
   var optsEl     = document.getElementById('opts');
   var textInput  = document.getElementById('textInput');
   var dropLabel  = document.getElementById('dropLabel');
@@ -716,7 +857,6 @@ var qrcode = (function(){
     var file = null;
     try { file = new File([blob], filename, { type: mime }); } catch(e){}
     
-    // Используем Web Share API для iOS и Android, чтобы избежать двойных вкладок
     if (file && navigator.canShare && navigator.canShare({ files: [file] })){
       navigator.share({ files: [file], title: filename }).catch(function(err){
         if (err && err.name !== 'AbortError') fallbackDownload(blob, filename);
@@ -738,7 +878,7 @@ var qrcode = (function(){
     }, 1500);
   }
 
-  // ИСПОЛЬЗУЕМ ?b64= ВМЕСТО #b64=
+  // Убираем data:... из ссылки для уменьшения длины
   function getShareBaseUrl(){
     if (location.protocol === 'file:' || location.protocol === 'blob:') return null;
     return location.origin + location.pathname;
@@ -746,7 +886,13 @@ var qrcode = (function(){
   function makeShareUrl(dataUrl, name){
     var base = getShareBaseUrl();
     if (!base) return null;
-    return base + '?b64=' + encodeURIComponent(dataUrl) + '&n=' + encodeURIComponent(name);
+    
+    var b64 = dataUrl;
+    if (dataUrl.indexOf('data:') === 0) {
+      var comma = dataUrl.indexOf(',');
+      if (comma !== -1) b64 = dataUrl.substring(comma + 1);
+    }
+    return base + '?b64=' + encodeURIComponent(b64) + '&n=' + encodeURIComponent(name);
   }
 
   function applyTheme(t){
@@ -778,9 +924,11 @@ var qrcode = (function(){
       panelText.classList.toggle('hidden', mode !== 'text');
       panelFile.classList.toggle('hidden', mode !== 'file');
       panelB64.classList.toggle('hidden', mode !== 'base64');
-      var isB64 = (mode === 'base64');
-      optsEl.style.display = isB64 ? 'none' : 'grid';
-      genBtn.style.display = isB64 ? 'none' : 'block';
+      panelZip.classList.toggle('hidden', mode !== 'zip');
+      
+      var hideGen = (mode === 'base64' || mode === 'zip');
+      optsEl.style.display = hideGen ? 'none' : 'grid';
+      genBtn.style.display = hideGen ? 'none' : 'block';
       setStatus('');
     });
   });
@@ -793,15 +941,29 @@ var qrcode = (function(){
       label.addEventListener(ev, function(e){ e.preventDefault(); label.classList.remove('over'); });
     });
     label.addEventListener('drop', function(e){
-      if (e.dataTransfer.files.length) onFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files.length) {
+        if (e.dataTransfer.files.length > 1 && typeof onFile === 'function') {
+          // Для ZIP обрабатываем несколько
+          for (var i=0; i<e.dataTransfer.files.length; i++) onFile(e.dataTransfer.files[i]);
+        } else {
+          onFile(e.dataTransfer.files[0]);
+        }
+      }
     });
     input.addEventListener('change', function(){
-      if (input.files.length) onFile(input.files[0]);
+      if (input.files.length) {
+        if (input.multiple) {
+          for (var i=0; i<input.files.length; i++) onFile(input.files[i]);
+        } else {
+          onFile(input.files[0]);
+        }
+      }
       input.value = '';
     });
   }
   bindDrop(dropLabel, fileInput, handleFile);
 
+  /* ===== ФАЙЛ → QR ===== */
   function handleFile(file){
     fileName = file.name.replace(/\.[^.]+$/, '') || 'qr-code';
     var reader = new FileReader();
@@ -860,7 +1022,7 @@ var qrcode = (function(){
           return;
         }
         if (new Blob([shareUrl]).size > 2900){
-          setStatus('Слишком большой файл.', 'err');
+          setStatus('Слишком большой файл для ссылки.', 'err');
           return;
         }
         dataForQR = shareUrl;
@@ -920,7 +1082,7 @@ var qrcode = (function(){
     downloadBlob(blob, fileName + '-qr.png', 'image/png');
   });
 
-  /* BASE64 ↔ ФАЙЛ */
+  /* ===== BASE64 → ФАЙЛ ===== */
   var b64DropLabel   = document.getElementById('b64DropLabel');
   var b64FileInput   = document.getElementById('b64FileInput');
   var b64FileInfo    = document.getElementById('b64FileInfo');
@@ -945,7 +1107,7 @@ var qrcode = (function(){
   var currentB64Mime = '';
   var currentB64Ext  = 'bin';
   var loadedFileName = 'file';
-  var b64Timer = null; // Вынесен наверх для очистки
+  var b64Timer = null;
 
   var EXT_MAP = {
     'image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp',
@@ -1144,30 +1306,26 @@ var qrcode = (function(){
   }
 
   b64CopyBtn.addEventListener('click', function(){
-    var text = b64Output.value;
-    if (!text){ showToast('Сначала загрузите файл'); return; }
-    copyText(text);
+    if (!b64Output.value){ showToast('Сначала загрузите файл'); return; }
+    copyText(b64Output.value);
   });
 
   b64SaveTxtBtn.addEventListener('click', function(){
-    var text = b64Output.value;
-    if (!text){ showToast('Сначала загрузите файл'); return; }
-    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    if (!b64Output.value){ showToast('Сначала загрузите файл'); return; }
+    var blob = new Blob([b64Output.value], { type: 'text/plain;charset=utf-8' });
     downloadBlob(blob, (loadedFileName || 'file') + '.base64.txt', 'text/plain');
-    showToast('Сохранение…');
   });
 
   b64UseQrBtn.addEventListener('click', function(){
-    var text = b64Output.value;
-    if (!text){ showToast('Сначала загрузите файл'); return; }
-    var dataForQR = text;
+    if (!b64Output.value){ showToast('Сначала загрузите файл'); return; }
+    var dataForQR = b64Output.value;
     if (b64UrlMode && b64UrlMode.checked){
-      var shareUrl = makeShareUrl(text, loadedFileName);
+      var shareUrl = makeShareUrl(dataForQR, loadedFileName);
       if (shareUrl === null){ showToast('Сайт открыт локально — ссылки не работают'); return; }
       if (new Blob([shareUrl]).size > 2900){ showToast('Для QR-ссылки слишком длинно'); return; }
       dataForQR = shareUrl;
     } else {
-      if (new Blob([text]).size > 2900){ showToast('Слишком длинно для QR-данных'); return; }
+      if (new Blob([dataForQR]).size > 2900){ showToast('Слишком длинно для QR-данных'); return; }
     }
     useInQr(dataForQR);
   });
@@ -1188,8 +1346,7 @@ var qrcode = (function(){
 
   function updateDownloadBtnText(){
     if (!currentB64Blob) return;
-    var name = cleanFilename(b64Filename.value) + '.' + currentExt();
-    b64DownloadBtn.textContent = 'Скачать ' + name;
+    b64DownloadBtn.textContent = 'Скачать ' + cleanFilename(b64Filename.value) + '.' + currentExt();
   }
 
   function updateB64Decode(){
@@ -1268,29 +1425,22 @@ var qrcode = (function(){
   });
 
   b64Filename.addEventListener('input', updateDownloadBtnText);
-  b64Ext.addEventListener('input', function(){
-    this.dataset.auto = 'false';
-    updateDownloadBtnText();
-  });
+  b64Ext.addEventListener('input', function(){ this.dataset.auto = 'false'; updateDownloadBtnText(); });
 
   b64DownloadBtn.addEventListener('click', function(){
     if (!currentB64Blob) return;
-    var name = cleanFilename(b64Filename.value) + '.' + currentExt();
-    downloadBlob(currentB64Blob, name, currentB64Mime || 'application/octet-stream');
-    showToast('Сохранение… ' + name);
+    downloadBlob(currentB64Blob, cleanFilename(b64Filename.value) + '.' + currentExt(), currentB64Mime || 'application/octet-stream');
   });
 
   b64QrFromInputBtn.addEventListener('click', function(){
-    var raw = b64Input.value.trim();
-    if (!raw) return;
-    if (new Blob([raw]).size > 2900){ showToast('Слишком длинно для QR'); return; }
-    useInQr(raw);
+    if (!b64Input.value.trim()) return;
+    if (new Blob([b64Input.value]).size > 2900){ showToast('Слишком длинно для QR'); return; }
+    useInQr(b64Input.value.trim());
   });
 
   b64CopyInputBtn.addEventListener('click', function(){
-    var v = b64Input.value.trim();
-    if (!v){ showToast('Поле пустое'); return; }
-    copyText(v);
+    if (!b64Input.value.trim()){ showToast('Поле пустое'); return; }
+    copyText(b64Input.value.trim());
   });
 
   b64LoadTxtBtn.addEventListener('click', function(){ b64TxtInput.click(); });
@@ -1305,10 +1455,7 @@ var qrcode = (function(){
       for (var i = 0; i < lines.length; i++){
         var L = lines[i].trim();
         if (!L) continue;
-        if (L.indexOf('data:') === 0 || /^[A-Za-z0-9+/=]{40,}$/.test(L)){
-          found = L;
-          break;
-        }
+        if (L.indexOf('data:') === 0 || /^[A-Za-z0-9+/=]{40,}$/.test(L)){ found = L; break; }
       }
       b64Input.value = (found || text).trim();
       updateB64Decode();
@@ -1334,6 +1481,121 @@ var qrcode = (function(){
     showToast('Очищено');
   });
 
+  /* ===== ZIP / СЖАТИЕ ===== */
+  var zipDropLabel = document.getElementById('zipDropLabel');
+  var zipFileInput = document.getElementById('zipFileInput');
+  var zipFileList  = document.getElementById('zipFileList');
+  var zipActions   = document.getElementById('zipActions');
+  var createZipBtn = document.getElementById('createZipBtn');
+  var compressSection = document.getElementById('compressSection');
+  var qualityRange = document.getElementById('qualityRange');
+  var qualityValue = document.getElementById('qualityValue');
+  var compressBtn  = document.getElementById('compressBtn');
+  
+  var zipFiles = [];
+
+  bindDrop(zipDropLabel, zipFileInput, function(file) {
+    zipFiles.push({ file: file });
+    renderZipList();
+  });
+
+  function renderZipList() {
+    zipFileList.innerHTML = '';
+    zipFiles.forEach(function(item, index) {
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      var ico = document.createElement('div');
+      ico.className = 'ico';
+      ico.textContent = (item.file.name.split('.').pop() || 'FILE').toUpperCase().substring(0,5);
+      box.appendChild(ico);
+      
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = '<div class="name">' + escapeHtml(item.file.name) + '</div>' +
+        '<div class="size">' + fmtSize(item.file.size) + '</div>';
+      box.appendChild(meta);
+      
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = 'Удалить';
+      removeBtn.onclick = function() {
+        zipFiles.splice(index, 1);
+        renderZipList();
+      };
+      box.appendChild(removeBtn);
+      zipFileList.appendChild(box);
+    });
+    
+    if (zipFiles.length > 0) {
+      zipActions.classList.remove('hidden');
+      if (zipFiles.length === 1 && zipFiles[0].file.type.indexOf('image/') === 0) {
+        compressSection.classList.remove('hidden');
+      } else {
+        compressSection.classList.add('hidden');
+      }
+    } else {
+      zipActions.classList.add('hidden');
+      compressSection.classList.add('hidden');
+    }
+  }
+
+  createZipBtn.addEventListener('click', async function() {
+    if (zipFiles.length === 0) return;
+    createZipBtn.disabled = true;
+    createZipBtn.textContent = 'Создание...';
+    try {
+      var filesData = [];
+      for (var i = 0; i < zipFiles.length; i++) {
+        var ab = await zipFiles[i].file.arrayBuffer();
+        filesData.push({ name: zipFiles[i].file.name, data: new Uint8Array(ab) });
+      }
+      var zipBlob = await createZipBlob(filesData);
+      downloadBlob(zipBlob, 'archive.zip', 'application/zip');
+      showToast('ZIP создан');
+    } catch(e) {
+      console.error(e);
+      showToast('Ошибка при создании ZIP');
+    } finally {
+      createZipBtn.disabled = false;
+      createZipBtn.textContent = 'Создать ZIP-архив';
+    }
+  });
+
+  qualityRange.addEventListener('input', function() {
+    qualityValue.textContent = this.value + '%';
+  });
+
+  compressBtn.addEventListener('click', function() {
+    if (zipFiles.length !== 1) return;
+    var file = zipFiles[0].file;
+    var quality = parseInt(qualityRange.value, 10) / 100;
+    
+    compressBtn.disabled = true;
+    compressBtn.textContent = 'Сжатие...';
+    
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(function(blob) {
+        downloadBlob(blob, file.name.replace(/\.[^.]+$/, '') + '-compressed.jpg', 'image/jpeg');
+        showToast('Фото сжато');
+        compressBtn.disabled = false;
+        compressBtn.textContent = 'Сжать и скачать';
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = function() {
+      showToast('Ошибка чтения изображения');
+      compressBtn.disabled = false;
+      compressBtn.textContent = 'Сжать и скачать';
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  /* ===== УТИЛИТЫ ===== */
   function useInQr(text){
     document.querySelector('.tab[data-tab="text"]').click();
     textInput.value = text;
@@ -1385,7 +1647,7 @@ var qrcode = (function(){
   });
 
   /* ============================================================
-     АВТО-ОБРАБОТКА ВХОДЯЩЕЙ QR-ССЫЛКИ (с автоскачиванием)
+     АВТО-ОБРАБОТКА ВХОДЯЩЕЙ QR-ССЫЛКИ
      ============================================================ */
   (function checkIncoming(){
     var urlParams = new URLSearchParams(window.location.search);
@@ -1397,13 +1659,12 @@ var qrcode = (function(){
 
     if (!b64) return;
 
-    // Очищаем URL, чтобы при перезагрузке страница не скачивала файл снова
+    // Очищаем URL, чтобы при перезагрузке страница не открывала файл заново
     try { history.replaceState(null, '', location.pathname); } catch(e){}
 
     setTimeout(function(){
       document.querySelector('.tab[data-tab="base64"]').click();
       
-      // Отключаем таймер ввода, чтобы избежать двойного вызова
       clearTimeout(b64Timer);
       b64Input.value = b64;
       
@@ -1414,7 +1675,7 @@ var qrcode = (function(){
 
       if (incomingBanner) {
           incomingBanner.classList.remove('hidden');
-          incomingBanner.textContent = "Данные получены. Подготовка файла...";
+          incomingBanner.textContent = "Данные получены. Файл готов.";
       }
 
       setTimeout(function(){
@@ -1422,19 +1683,17 @@ var qrcode = (function(){
           if (navigator.clipboard && navigator.clipboard.writeText){
             navigator.clipboard.writeText(b64).catch(function(){});
           }
-          
+          // Автоскачивание ровно 1 раз
           if (currentB64Blob) {
               var name = cleanFilename(b64Filename.value) + '.' + currentExt();
               downloadBlob(currentB64Blob, name, currentB64Mime);
-              if (incomingBanner) incomingBanner.textContent = "Файл готов к скачиванию!";
           }
-          
         } catch(e){}
         b64Preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 400);
+      }, 300);
     }, 100);
   })();
 })();
 </script>
 </body>
-</html>
+          </html>
