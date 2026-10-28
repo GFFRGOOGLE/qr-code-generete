@@ -140,7 +140,7 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
       <button class="tab active" data-tab="text">Текст</button>
       <button class="tab" data-tab="file">Файл</button>
       <button class="tab" data-tab="base64">Base64</button>
-      <button class="tab" data-tab="zip">ZIP / Сжать</button>
+      <button class="tab" data-tab="zip">Архивы</button>
     </div>
 
     <!-- TEXT -->
@@ -237,7 +237,7 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
       <div id="b64Preview" class="b64-preview"></div>
     </div>
 
-    <!-- ZIP / СЖАТЬ -->
+    <!-- АРХИВЫ -->
     <div id="panel-zip" class="hidden">
       <div class="zip-modes">
         <button class="zip-mode active" data-mode="pack">Упаковать</button>
@@ -247,7 +247,7 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
 
       <!-- РЕЖИМ: УПАКОВАТЬ -->
       <div id="zip-pack">
-        <div class="section-title">Упаковать в ZIP <span class="hint">выберите файлы</span></div>
+        <div class="section-title">Упаковать в архив <span class="hint">выберите файлы</span></div>
         <label class="drop" for="zipFileInput" id="zipDropLabel">
           <b>Нажмите</b> или перетащите файлы<br>
           <span class="sub">Можно выбрать несколько файлов сразу</span>
@@ -257,18 +257,35 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
         <div id="zipFileList" class="file-list"></div>
         
         <div id="zipActions" class="hidden" style="margin-top:16px">
-          <button class="btn-primary" id="createZipBtn">Создать ZIP-архив</button>
+          <div class="opts">
+            <div class="opt">
+              <label>Формат</label>
+              <select id="zipPackFormat">
+                <option value="zip">ZIP</option>
+                <option value="tar">TAR</option>
+                <option value="tar.gz">TAR.GZ</option>
+                <option value="gzip">GZIP (один файл)</option>
+              </select>
+            </div>
+            <div class="opt">
+              <label>Имя архива</label>
+              <div class="filename-row">
+                <input type="text" id="zipPackName" value="archive" placeholder="archive">
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary" id="createZipBtn">Создать архив</button>
         </div>
       </div>
 
       <!-- РЕЖИМ: РАСПАКОВАТЬ -->
       <div id="zip-unpack" class="hidden">
-        <div class="section-title">Распаковать ZIP <span class="hint">загрузите архив</span></div>
+        <div class="section-title">Распаковать архив <span class="hint">ZIP · TAR · TAR.GZ · GZ</span></div>
         <label class="drop" for="unzipFileInput" id="unzipDropLabel">
-          <b>Нажмите</b> или перетащите ZIP<br>
-          <span class="sub">.zip файл</span>
+          <b>Нажмите</b> или перетащите архив<br>
+          <span class="sub">.zip · .tar · .tar.gz · .tgz · .gz</span>
         </label>
-        <input type="file" id="unzipFileInput" class="file-hidden" accept=".zip">
+        <input type="file" id="unzipFileInput" class="file-hidden" accept=".zip,.tar,.gz,.tgz,.tar.gz">
         
         <div id="unzipFileList" class="file-list"></div>
       </div>
@@ -298,6 +315,16 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
               <input type="range" id="qualityRange" min="10" max="100" value="60">
             </div>
           </div>
+          
+          <div class="field-row">
+            <div class="lbl">Имя файла</div>
+            <div class="filename-row">
+              <input type="text" id="compressName" value="image" placeholder="image">
+              <span class="dot">.</span>
+              <input type="text" id="compressExtDisplay" value="jpg" class="ext-input" readonly>
+            </div>
+          </div>
+
           <button class="btn-sm seal" id="compressBtn" style="width:100%;">Скачать</button>
         </div>
       </div>
@@ -331,6 +358,15 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
         <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
       </div>
       <div class="status" id="status"></div>
+      
+      <div id="qrNameBlock" class="hidden" style="margin: 14px auto 0; max-width: 300px;">
+        <div class="filename-row">
+          <input type="text" id="qrFileName" value="qr-code" placeholder="qr-code">
+          <span class="dot">.</span>
+          <span style="font-family:'Courier New',monospace; font-size:12px; padding:11px 0;">png</span>
+        </div>
+      </div>
+
       <div class="btn-row">
         <button class="btn-sm gold hidden" id="dlBtn">Скачать PNG</button>
       </div>
@@ -752,8 +788,10 @@ var qrcode = (function(){
 })();
 
 /* ============================================================
-   ZIP-АРХИВАТОР (Собственная реализация, без библиотек)
+   УТИЛИТЫ ДЛЯ РАБОТЫ С АРХИВАМИ
    ============================================================ */
+
+// --- ZIP ---
 var crcTable = new Uint32Array(256);
 for (var i = 0; i < 256; i++) {
   var c = i;
@@ -838,9 +876,6 @@ async function createZipBlob(files) {
   return new Blob([...parts, ...centralParts, eocd], { type: 'application/zip' });
 }
 
-/* ============================================================
-   ZIP-РАСПАКОВЩИК
-   ============================================================ */
 async function unzipBlob(zipBlob) {
   var buffer = await zipBlob.arrayBuffer();
   var data = new Uint8Array(buffer);
@@ -910,6 +945,111 @@ async function unzipBlob(zipBlob) {
   return files;
 }
 
+// --- TAR ---
+function createTarHeader(name, size, mtime, typeflag) {
+  var header = new Uint8Array(512);
+  var enc = new TextEncoder();
+  var nameBytes = enc.encode(name);
+  header.set(nameBytes.slice(0, 100), 0);
+  
+  function writeOctal(offset, length, value) {
+    var str = value.toString(8);
+    while (str.length < length - 1) str = '0' + str;
+    str += ' ';
+    var bytes = enc.encode(str);
+    header.set(bytes.slice(0, length), offset);
+  }
+  
+  writeOctal(100, 8, 0o644); // mode
+  writeOctal(108, 8, 0); // uid
+  writeOctal(116, 8, 0); // gid
+  writeOctal(124, 12, size);
+  writeOctal(136, 12, mtime);
+  header.set(enc.encode('        '), 148); // checksum placeholder
+  header[156] = typeflag.charCodeAt(0);
+  header.set(enc.encode('ustar\0'), 257);
+  header.set(enc.encode('00'), 263);
+  header.set(enc.encode('user'), 265);
+  header.set(enc.encode('user'), 297);
+  
+  var sum = 0;
+  for (var i = 0; i < 512; i++) sum += header[i];
+  var chkStr = sum.toString(8);
+  while (chkStr.length < 6) chkStr = '0' + chkStr;
+  chkStr += '\0 ';
+  header.set(enc.encode(chkStr), 148);
+  
+  return header;
+}
+
+async function createTarBlob(files) {
+  var parts = [];
+  var mtime = Math.floor(Date.now() / 1000);
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    var header = createTarHeader(f.name, f.data.length, mtime, '0');
+    parts.push(header);
+    parts.push(f.data);
+    var padLen = (512 - (f.data.length % 512)) % 512;
+    if (padLen > 0) parts.push(new Uint8Array(padLen));
+  }
+  parts.push(new Uint8Array(1024)); // end of archive
+  return new Blob(parts, { type: 'application/x-tar' });
+}
+
+async function untarBlob(tarBlob) {
+  var buffer = await tarBlob.arrayBuffer();
+  var data = new Uint8Array(buffer);
+  var files = [];
+  var offset = 0;
+  var dec = new TextDecoder();
+  
+  while (offset + 512 <= data.length) {
+    var header = data.slice(offset, offset + 512);
+    var nameBytes = header.slice(0, 100);
+    var name = dec.decode(nameBytes).replace(/\0.*$/, '').trim();
+    if (!name) break;
+    
+    var sizeStr = dec.decode(header.slice(124, 136)).replace(/\0.*$/, '').trim();
+    var size = parseInt(sizeStr, 8) || 0;
+    
+    offset += 512;
+    if (offset + size > data.length) break;
+    
+    var fileData = data.slice(offset, offset + size);
+    files.push({ name: name, data: fileData });
+    
+    offset += size;
+    var padLen = (512 - (size % 512)) % 512;
+    offset += padLen;
+  }
+  return files;
+}
+
+// --- GZIP ---
+async function gzipBlob(blob) {
+  if (typeof CompressionStream === 'undefined') throw new Error('GZIP не поддерживается');
+  var stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
+  return await new Response(stream).blob();
+}
+
+async function gunzipBlob(blob) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('GZIP не поддерживается');
+  var stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(stream).blob();
+}
+
+// --- Автоопределение формата ---
+function detectArchiveFormat(bytes) {
+  if (bytes.length < 4) return null;
+  if (bytes[0] === 0x50 && bytes[1] === 0x4B) return 'zip';
+  if (bytes[0] === 0x1F && bytes[1] === 0x8B) return 'gzip';
+  if (bytes.length >= 262) {
+    var magic = String.fromCharCode(bytes[257], bytes[258], bytes[259], bytes[260], bytes[261]);
+    if (magic === 'ustar') return 'tar';
+  }
+  return 'unknown';
+}
 
 /* ============================================================
    UI ЛОГИКА
@@ -939,6 +1079,8 @@ async function unzipBlob(zipBlob) {
   var themeBtn   = document.getElementById('theme-toggle');
   var metaTheme  = document.getElementById('meta-theme');
   var incomingBanner = document.getElementById('incomingBanner');
+  var qrNameBlock = document.getElementById('qrNameBlock');
+  var qrFileName  = document.getElementById('qrFileName');
 
   var mode = 'text';
   var payload = null;
@@ -954,7 +1096,7 @@ async function unzipBlob(zipBlob) {
     var file = null;
     try { file = new File([blob], filename, { type: mime }); } catch(e){}
     
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })){
+    if (isIOS() && file && navigator.canShare && navigator.canShare({ files: [file] })){
       navigator.share({ files: [file], title: filename }).catch(function(err){
         if (err && err.name !== 'AbortError') fallbackDownload(blob, filename);
       });
@@ -1070,6 +1212,7 @@ async function unzipBlob(zipBlob) {
   /* ===== ФАЙЛ → QR ===== */
   function handleFile(file){
     fileName = file.name.replace(/\.[^.]+$/, '') || 'qr-code';
+    qrFileName.value = fileName;
     var reader = new FileReader();
     reader.onload = function(){
       payload = reader.result;
@@ -1096,6 +1239,7 @@ async function unzipBlob(zipBlob) {
         fileInfo.innerHTML = '';
         canvasWrap.classList.add('hidden');
         dlBtn.classList.add('hidden');
+        qrNameBlock.classList.add('hidden');
         setStatus('Файл удалён.', '');
       };
       box.appendChild(removeBtn);
@@ -1115,7 +1259,6 @@ async function unzipBlob(zipBlob) {
     var dataForQR;
     if (mode === 'text'){
       dataForQR = textInput.value;
-      fileName = 'qr-text';
       if (!dataForQR || !dataForQR.trim()){ setStatus('Введите текст или ссылку.', 'err'); return; }
     } else if (mode === 'file'){
       if (!payload){ setStatus('Сначала выберите файл.', 'err'); return; }
@@ -1149,13 +1292,15 @@ async function unzipBlob(zipBlob) {
         drawOnCanvas(qr, parseInt(sizeSel.value, 10));
         canvasWrap.classList.remove('hidden');
         dlBtn.classList.remove('hidden');
+        qrNameBlock.classList.remove('hidden');
+        
         var info = (mode === 'file' && fileUrlMode && fileUrlMode.checked)
           ? 'QR-ссылка готова'
           : 'QR-код готов';
         setStatus(info + ' · ' + qr.getModuleCount() + '×' + qr.getModuleCount(), 'ok');
         showToast(info);
       } catch (err){
-        canvasWrap.classList.add('hidden'); dlBtn.classList.add('hidden');
+        canvasWrap.classList.add('hidden'); dlBtn.classList.add('hidden'); qrNameBlock.classList.add('hidden');
         setStatus('Ошибка: ' + (err.message || err), 'err');
       } finally { genBtn.disabled = false; }
     }, 20);
@@ -1183,7 +1328,8 @@ async function unzipBlob(zipBlob) {
     var arr = new Uint8Array(byteStr.length);
     for (var i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
     var blob = new Blob([arr], { type: 'image/png' });
-    downloadBlob(blob, fileName + '-qr.png', 'image/png');
+    var outName = cleanFilename(qrFileName.value) || 'qr-code';
+    downloadBlob(blob, outName + '-qr.png', 'image/png');
   });
 
   /* ===== BASE64 → ФАЙЛ ===== */
@@ -1583,7 +1729,7 @@ async function unzipBlob(zipBlob) {
     showToast('Очищено');
   });
 
-  /* ===== ZIP: переключение режимов ===== */
+  /* ===== АРХИВЫ ===== */
   var zipMode = 'pack';
   document.querySelectorAll('.zip-mode').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -1596,12 +1742,14 @@ async function unzipBlob(zipBlob) {
     });
   });
 
-  /* ===== ZIP: упаковать ===== */
+  /* ===== АРХИВЫ: упаковать ===== */
   var zipDropLabel = document.getElementById('zipDropLabel');
   var zipFileInput = document.getElementById('zipFileInput');
   var zipFileList  = document.getElementById('zipFileList');
   var zipActions   = document.getElementById('zipActions');
   var createZipBtn = document.getElementById('createZipBtn');
+  var zipPackFormat = document.getElementById('zipPackFormat');
+  var zipPackName  = document.getElementById('zipPackName');
   var zipFiles = [];
 
   bindDrop(zipDropLabel, zipFileInput, function(file) {
@@ -1647,37 +1795,86 @@ async function unzipBlob(zipBlob) {
         var ab = await zipFiles[i].file.arrayBuffer();
         filesData.push({ name: zipFiles[i].file.name, data: new Uint8Array(ab) });
       }
-      var zipBlob = await createZipBlob(filesData);
-      downloadBlob(zipBlob, 'archive.zip', 'application/zip');
-      showToast('ZIP создан');
+      
+      var format = zipPackFormat.value;
+      var outName = cleanFilename(zipPackName.value) || 'archive';
+      var blob;
+      var ext;
+      
+      if (format === 'zip') {
+        blob = await createZipBlob(filesData);
+        ext = '.zip';
+      } else if (format === 'tar') {
+        blob = await createTarBlob(filesData);
+        ext = '.tar';
+      } else if (format === 'tar.gz') {
+        var tarBlob = await createTarBlob(filesData);
+        blob = await gzipBlob(tarBlob);
+        ext = '.tar.gz';
+      } else if (format === 'gzip') {
+        if (filesData.length !== 1) {
+          showToast('GZIP поддерживает только один файл');
+          createZipBtn.disabled = false;
+          createZipBtn.textContent = 'Создать архив';
+          return;
+        }
+        var fileBlob = new Blob([filesData[0].data]);
+        blob = await gzipBlob(fileBlob);
+        ext = '.gz';
+        outName = cleanFilename(filesData[0].name.replace(/\.[^.]+$/, '')) || 'file';
+      }
+      
+      downloadBlob(blob, outName + ext, 'application/octet-stream');
+      showToast('Архив создан');
     } catch(e) {
       console.error(e);
-      showToast('Ошибка при создании ZIP');
+      showToast('Ошибка при создании архива: ' + e.message);
     } finally {
       createZipBtn.disabled = false;
-      createZipBtn.textContent = 'Создать ZIP-архив';
+      createZipBtn.textContent = 'Создать архив';
     }
   });
 
-  /* ===== ZIP: распаковать ===== */
+  /* ===== АРХИВЫ: распаковать ===== */
   var unzipDropLabel = document.getElementById('unzipDropLabel');
   var unzipFileInput = document.getElementById('unzipFileInput');
   var unzipFileList  = document.getElementById('unzipFileList');
   var unzipFiles = [];
   var currentZipName = '';
+  var currentArchiveType = '';
 
   bindDrop(unzipDropLabel, unzipFileInput, async function(file) {
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      showToast('Нужен .zip файл');
-      return;
-    }
-    unzipFileList.innerHTML = '<div class="status">Распаковка...</div>';
+    unzipFileList.innerHTML = '<div class="status">Определение формата...</div>';
     try {
-      var files = await unzipBlob(file);
-      unzipFiles = files;
+      var ab = await file.arrayBuffer();
+      var bytes = new Uint8Array(ab);
+      var detected = detectArchiveFormat(bytes);
+      
+      if (detected === 'zip') {
+        unzipFiles = await unzipBlob(file);
+        currentArchiveType = 'ZIP';
+      } else if (detected === 'tar') {
+        unzipFiles = await untarBlob(file);
+        currentArchiveType = 'TAR';
+      } else if (detected === 'gzip') {
+        var decompressed = await gunzipBlob(file);
+        var decBytes = new Uint8Array(await decompressed.arrayBuffer());
+        var innerDetected = detectArchiveFormat(decBytes);
+        
+        if (innerDetected === 'tar') {
+          unzipFiles = await untarBlob(decompressed);
+          currentArchiveType = 'TAR.GZ';
+        } else {
+          unzipFiles = [{ name: file.name.replace(/\.gz$/, ''), data: decBytes }];
+          currentArchiveType = 'GZIP';
+        }
+      } else {
+        throw new Error('Неизвестный формат архива');
+      }
+      
       currentZipName = file.name;
       renderUnzipList();
-      showToast('Распаковано: ' + files.length + ' файлов');
+      showToast('Распаковано: ' + unzipFiles.length + ' файлов (' + currentArchiveType + ')');
     } catch (e) {
       unzipFileList.innerHTML = '<div class="status err">Ошибка: ' + escapeHtml(e.message) + '</div>';
     }
@@ -1691,12 +1888,12 @@ async function unzipBlob(zipBlob) {
       box.className = 'file-info';
       var ico = document.createElement('div');
       ico.className = 'ico';
-      ico.textContent = 'ZIP';
+      ico.textContent = currentArchiveType;
       box.appendChild(ico);
       var meta = document.createElement('div');
       meta.className = 'meta';
       meta.innerHTML = '<div class="name">' + escapeHtml(currentZipName) + '</div>' +
-        '<div class="size">Архив загружен</div>';
+        '<div class="size">Формат: ' + currentArchiveType + '</div>';
       box.appendChild(meta);
       var removeBtn = document.createElement('button');
       removeBtn.className = 'btn-remove';
@@ -1704,6 +1901,7 @@ async function unzipBlob(zipBlob) {
       removeBtn.onclick = function() {
         unzipFiles = [];
         currentZipName = '';
+        currentArchiveType = '';
         unzipFileList.innerHTML = '';
         unzipFileInput.value = '';
         showToast('Архив удалён');
@@ -1743,25 +1941,34 @@ async function unzipBlob(zipBlob) {
     });
     
     if (unzipFiles.length > 0) {
+      var allBox = document.createElement('div');
+      allBox.style.marginTop = '16px';
+      allBox.innerHTML = '<div class="field-row"><div class="lbl">Имя архива</div><div class="filename-row"><input type="text" id="zipExtractName" value="extracted" placeholder="extracted"><span class="dot">.</span><span style="font-family:\'Courier New\',monospace; font-size:12px; padding:11px 0;">zip</span></div></div>';
+      
       var allBtn = document.createElement('button');
       allBtn.className = 'btn-primary';
-      allBtn.style.marginTop = '12px';
-      allBtn.textContent = 'Скачать все (' + unzipFiles.length + ')';
+      allBtn.textContent = 'Скачать все как ZIP (' + unzipFiles.length + ')';
       allBtn.onclick = async function() {
+        var nameInput = document.getElementById('zipExtractName');
+        var outName = cleanFilename(nameInput.value) || 'extracted';
         var filesData = unzipFiles.map(function(f) { return { name: f.name, data: f.data }; });
         var blob = await createZipBlob(filesData);
-        downloadBlob(blob, 'extracted.zip');
+        downloadBlob(blob, outName + '.zip', 'application/zip');
       };
-      unzipFileList.appendChild(allBtn);
+      
+      allBox.appendChild(allBtn);
+      unzipFileList.appendChild(allBox);
     }
   }
 
-  /* ===== ZIP: сжать фото ===== */
+  /* ===== АРХИВЫ: сжать фото ===== */
   var compressDropLabel = document.getElementById('compressDropLabel');
   var compressFileInput = document.getElementById('compressFileInput');
   var compressFileInfo = document.getElementById('compressFileInfo');
   var compressOptions = document.getElementById('compressOptions');
   var compressFormat = document.getElementById('compressFormat');
+  var compressName = document.getElementById('compressName');
+  var compressExtDisplay = document.getElementById('compressExtDisplay');
   var qualityOpt = document.getElementById('qualityOpt');
   var qualityRange = document.getElementById('qualityRange');
   var qualityValue = document.getElementById('qualityValue');
@@ -1770,6 +1977,7 @@ async function unzipBlob(zipBlob) {
 
   bindDrop(compressDropLabel, compressFileInput, function(file) {
     compressFile = file;
+    compressName.value = file.name.replace(/\.[^.]+$/, '') || 'image';
     compressFileInfo.innerHTML = '';
     var box = document.createElement('div');
     box.className = 'file-info';
@@ -1797,6 +2005,7 @@ async function unzipBlob(zipBlob) {
 
   compressFormat.addEventListener('change', function() {
     qualityOpt.style.display = (this.value === 'png') ? 'none' : 'flex';
+    compressExtDisplay.value = (this.value === 'jpeg') ? 'jpg' : this.value;
   });
 
   qualityRange.addEventListener('input', function() {
@@ -1817,7 +2026,6 @@ async function unzipBlob(zipBlob) {
       ctx.drawImage(img, 0, 0);
       
       var mime = 'image/' + format;
-      var ext = format === 'jpeg' ? 'jpg' : format;
       
       canvas.toBlob(function(blob) {
         if (!blob) {
@@ -1828,7 +2036,10 @@ async function unzipBlob(zipBlob) {
         var newSize = blob.size;
         var diff = ((1 - newSize / origSize) * 100).toFixed(0);
         
-        downloadBlob(blob, compressFile.name.replace(/\.[^.]+$/, '') + '.' + ext, mime);
+        var outName = cleanFilename(compressName.value) || 'image';
+        var outExt = compressExtDisplay.value;
+        
+        downloadBlob(blob, outName + '.' + outExt, mime);
         showToast('Сжато: ' + fmtSize(origSize) + ' → ' + fmtSize(newSize) + ' (-' + diff + '%)');
       }, mime, quality);
     };
@@ -1937,4 +2148,4 @@ async function unzipBlob(zipBlob) {
 })();
 </script>
 </body>
-  </html>
+</html>
