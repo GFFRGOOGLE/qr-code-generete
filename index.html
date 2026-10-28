@@ -715,7 +715,9 @@ var qrcode = (function(){
     mime = mime || blob.type || 'application/octet-stream';
     var file = null;
     try { file = new File([blob], filename, { type: mime }); } catch(e){}
-    if (file && isIOS() && navigator.canShare && navigator.canShare({ files: [file] })){
+    
+    // Используем Web Share API для iOS и Android, чтобы избежать двойных вкладок
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })){
       navigator.share({ files: [file], title: filename }).catch(function(err){
         if (err && err.name !== 'AbortError') fallbackDownload(blob, filename);
       });
@@ -723,6 +725,7 @@ var qrcode = (function(){
     }
     fallbackDownload(blob, filename);
   }
+
   function fallbackDownload(blob, filename){
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -735,7 +738,7 @@ var qrcode = (function(){
     }, 1500);
   }
 
-  /* Генерирует правильную ссылку вида ?b64=data:...&n=name */
+  // ИСПОЛЬЗУЕМ ?b64= ВМЕСТО #b64=
   function getShareBaseUrl(){
     if (location.protocol === 'file:' || location.protocol === 'blob:') return null;
     return location.origin + location.pathname;
@@ -833,7 +836,7 @@ var qrcode = (function(){
       fileInfo.appendChild(box);
 
       if (bytes > 2600){
-        setStatus('Файл большой, но QR-ссылка может уместиться (снимите галочку если не влезет).', 'warn');
+        setStatus('Файл большой, но QR-ссылка может уместиться.', 'warn');
       } else {
         setStatus('Файл загружен. Нажмите «Сгенерировать».', 'ok');
       }
@@ -853,18 +856,17 @@ var qrcode = (function(){
       if (fileUrlMode && fileUrlMode.checked){
         var shareUrl = makeShareUrl(payload, fileName);
         if (shareUrl === null){
-          setStatus('Сайт открыт локально (file://) — QR-ссылки не будут работать. Загрузите файл на хостинг.', 'err');
-          showToast('Локальный запуск — ссылки не работают');
+          setStatus('Сайт открыт локально (file://) — QR-ссылки не будут работать.', 'err');
           return;
         }
         if (new Blob([shareUrl]).size > 2900){
-          setStatus('Для QR-ссылки слишком большой файл. Снимите галочку «как ссылка» или сожмите файл.', 'err');
+          setStatus('Слишком большой файл.', 'err');
           return;
         }
         dataForQR = shareUrl;
       } else {
         if (new Blob([payload]).size > 2900){
-          setStatus('Файл слишком большой для QR (макс ~2.9 КБ). Используйте режим ссылки.', 'err');
+          setStatus('Файл слишком большой для QR (макс ~2.9 КБ).', 'err');
           return;
         }
         dataForQR = payload;
@@ -884,16 +886,11 @@ var qrcode = (function(){
         var info = (mode === 'file' && fileUrlMode && fileUrlMode.checked)
           ? 'QR-ссылка готова'
           : 'QR-код готов';
-        setStatus(info + ' · ' + qr.getModuleCount() + '×' + qr.getModuleCount() + ' · ' + eclSel.value, 'ok');
+        setStatus(info + ' · ' + qr.getModuleCount() + '×' + qr.getModuleCount(), 'ok');
         showToast(info);
-        if (mode === 'file' && fileUrlMode && fileUrlMode.checked){
-          hint.textContent = 'Отсканируйте камерой — откроется страница, base64 скопируется, файл будет готов к скачиванию.';
-        } else {
-          hint.textContent = 'Наведите камеру телефона на код.';
-        }
       } catch (err){
         canvasWrap.classList.add('hidden'); dlBtn.classList.add('hidden');
-        setStatus('Ошибка: ' + (err.message || err) + '. Уменьшите объём.', 'err');
+        setStatus('Ошибка: ' + (err.message || err), 'err');
       } finally { genBtn.disabled = false; }
     }, 20);
   });
@@ -921,7 +918,6 @@ var qrcode = (function(){
     for (var i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
     var blob = new Blob([arr], { type: 'image/png' });
     downloadBlob(blob, fileName + '-qr.png', 'image/png');
-    showToast('Сохранение…');
   });
 
   /* BASE64 ↔ ФАЙЛ */
@@ -949,6 +945,7 @@ var qrcode = (function(){
   var currentB64Mime = '';
   var currentB64Ext  = 'bin';
   var loadedFileName = 'file';
+  var b64Timer = null; // Вынесен наверх для очистки
 
   var EXT_MAP = {
     'image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp',
@@ -1166,20 +1163,11 @@ var qrcode = (function(){
     var dataForQR = text;
     if (b64UrlMode && b64UrlMode.checked){
       var shareUrl = makeShareUrl(text, loadedFileName);
-      if (shareUrl === null){
-        showToast('Сайт открыт локально — ссылки не работают');
-        return;
-      }
-      if (new Blob([shareUrl]).size > 2900){
-        showToast('Для QR-ссылки слишком длинно');
-        return;
-      }
+      if (shareUrl === null){ showToast('Сайт открыт локально — ссылки не работают'); return; }
+      if (new Blob([shareUrl]).size > 2900){ showToast('Для QR-ссылки слишком длинно'); return; }
       dataForQR = shareUrl;
     } else {
-      if (new Blob([text]).size > 2900){
-        showToast('Слишком длинно для QR-данных');
-        return;
-      }
+      if (new Blob([text]).size > 2900){ showToast('Слишком длинно для QR-данных'); return; }
     }
     useInQr(dataForQR);
   });
@@ -1270,12 +1258,14 @@ var qrcode = (function(){
     }
   }
 
-  var b64Timer = null;
   b64Input.addEventListener('input', function(){
     clearTimeout(b64Timer);
     b64Timer = setTimeout(updateB64Decode, 200);
   });
-  b64Input.addEventListener('paste', function(){ setTimeout(updateB64Decode, 30); });
+  b64Input.addEventListener('paste', function(){ 
+    clearTimeout(b64Timer);
+    setTimeout(updateB64Decode, 30); 
+  });
 
   b64Filename.addEventListener('input', updateDownloadBtnText);
   b64Ext.addEventListener('input', function(){
@@ -1407,38 +1397,41 @@ var qrcode = (function(){
 
     if (!b64) return;
 
+    // Очищаем URL, чтобы при перезагрузке страница не скачивала файл снова
+    try { history.replaceState(null, '', location.pathname); } catch(e){}
+
     setTimeout(function(){
       document.querySelector('.tab[data-tab="base64"]').click();
+      
+      // Отключаем таймер ввода, чтобы избежать двойного вызова
+      clearTimeout(b64Timer);
       b64Input.value = b64;
+      
       if (nm && b64Filename) b64Filename.value = decodeURIComponent(nm).replace(/\.[^.]+$/, '');
       b64Ext.dataset.auto = 'true';
-      updateB64Decode();
       
+      updateB64Decode();
+
       if (incomingBanner) {
           incomingBanner.classList.remove('hidden');
-          incomingBanner.textContent = "Данные получены. Файл скачивается...";
+          incomingBanner.textContent = "Данные получены. Подготовка файла...";
       }
 
       setTimeout(function(){
         try {
           if (navigator.clipboard && navigator.clipboard.writeText){
-            navigator.clipboard.writeText(b64).then(function(){
-              showToast('Base64 скопирован в буфер');
-            }).catch(function(){});
+            navigator.clipboard.writeText(b64).catch(function(){});
           }
           
-          // Автоматическое скачивание
           if (currentB64Blob) {
               var name = cleanFilename(b64Filename.value) + '.' + currentExt();
               downloadBlob(currentB64Blob, name, currentB64Mime);
               if (incomingBanner) incomingBanner.textContent = "Файл готов к скачиванию!";
           }
           
-        } catch(e){
-          showToast('Ошибка автоскачивания');
-        }
+        } catch(e){}
         b64Preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
+      }, 400);
     }, 100);
   })();
 })();
