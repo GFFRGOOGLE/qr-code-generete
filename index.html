@@ -782,40 +782,31 @@ async function createZipBlob(files) {
     var size = data.length;
     var compData = data;
     var compSize = size;
-    var method = 0; // 0 = Store
+    var method = 0;
 
     try {
       if (typeof CompressionStream !== 'undefined') {
         var stream = new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
         compData = new Uint8Array(await new Response(stream).arrayBuffer());
         compSize = compData.length;
-        method = 8; // 8 = Deflate
-        if (compSize >= size) {
-          compData = data;
-          compSize = size;
-          method = 0;
-        }
+        method = 8;
+        if (compSize >= size) { compData = data; compSize = size; method = 0; }
       }
-    } catch(e) { console.warn('Compression failed, storing raw', e); }
+    } catch(e) {}
 
-    // Local File Header
     var header = new Uint8Array(30 + nameBytes.length);
     var view = new DataView(header.buffer);
     view.setUint32(0, 0x04034b50, true);
     view.setUint16(4, 20, true);
-    view.setUint16(6, 0x0800, true); // UTF-8
+    view.setUint16(6, 0x0800, true);
     view.setUint16(8, method, true);
-    view.setUint16(10, 0, true);
-    view.setUint16(12, 0, true);
     view.setUint32(14, crc, true);
     view.setUint32(18, compSize, true);
     view.setUint32(22, size, true);
     view.setUint16(26, nameBytes.length, true);
-    view.setUint16(28, 0, true);
     header.set(nameBytes, 30);
     parts.push(header, compData);
 
-    // Central Directory
     var central = new Uint8Array(46 + nameBytes.length);
     var cView = new DataView(central.buffer);
     cView.setUint32(0, 0x02014b50, true);
@@ -823,17 +814,10 @@ async function createZipBlob(files) {
     cView.setUint16(6, 20, true);
     cView.setUint16(8, 0x0800, true);
     cView.setUint16(10, method, true);
-    cView.setUint16(12, 0, true);
-    cView.setUint16(14, 0, true);
     cView.setUint32(16, crc, true);
     cView.setUint32(20, compSize, true);
     cView.setUint32(24, size, true);
     cView.setUint16(28, nameBytes.length, true);
-    cView.setUint16(30, 0, true);
-    cView.setUint16(32, 0, true);
-    cView.setUint16(34, 0, true);
-    cView.setUint16(36, 0, true);
-    cView.setUint32(38, 0, true);
     cView.setUint32(42, offset, true);
     central.set(nameBytes, 46);
     centralParts.push(central);
@@ -846,13 +830,10 @@ async function createZipBlob(files) {
   var eocd = new Uint8Array(22);
   var eView = new DataView(eocd.buffer);
   eView.setUint32(0, 0x06054b50, true);
-  eView.setUint16(4, 0, true);
-  eView.setUint16(6, 0, true);
   eView.setUint16(8, files.length, true);
   eView.setUint16(10, files.length, true);
   eView.setUint32(12, centralSize, true);
   eView.setUint32(16, offset, true);
-  eView.setUint16(20, 0, true);
 
   return new Blob([...parts, ...centralParts, eocd], { type: 'application/zip' });
 }
@@ -865,13 +846,9 @@ async function unzipBlob(zipBlob) {
   var data = new Uint8Array(buffer);
   var view = new DataView(buffer);
 
-  // Поиск EOCD
   var eocdOffset = -1;
   for (var i = data.length - 22; i >= 0; i--) {
-    if (view.getUint32(i, true) === 0x06054b50) {
-      eocdOffset = i;
-      break;
-    }
+    if (view.getUint32(i, true) === 0x06054b50) { eocdOffset = i; break; }
   }
   if (eocdOffset === -1) throw new Error('Не похоже на ZIP-архив');
 
@@ -894,7 +871,6 @@ async function unzipBlob(zipBlob) {
     var nameBytes = data.slice(offset + 46, offset + 46 + nameLen);
     var name = new TextDecoder().decode(nameBytes);
 
-    // Локальный заголовок
     var lhView = new DataView(buffer, localHeaderOffset);
     var lhNameLen = lhView.getUint16(26, true);
     var lhExtraLen = lhView.getUint16(28, true);
@@ -904,9 +880,8 @@ async function unzipBlob(zipBlob) {
 
     var fileData = null;
     try {
-      if (method === 0) {
-        fileData = compData;
-      } else if (method === 8) {
+      if (method === 0) { fileData = compData; }
+      else if (method === 8) {
         var ds = new DecompressionStream('deflate-raw');
         var writer = ds.writable.getWriter();
         writer.write(compData);
@@ -927,14 +902,11 @@ async function unzipBlob(zipBlob) {
           pos += chunks[k].length;
         }
       }
-    } catch(e) {
-      console.warn('Ошибка распаковки файла', name, e);
-    }
+    } catch(e) {}
 
     if (fileData) files.push({ name: name, data: fileData });
     offset += 46 + nameLen + extraLen + commentLen;
   }
-
   return files;
 }
 
@@ -1692,6 +1664,7 @@ async function unzipBlob(zipBlob) {
   var unzipFileInput = document.getElementById('unzipFileInput');
   var unzipFileList  = document.getElementById('unzipFileList');
   var unzipFiles = [];
+  var currentZipName = '';
 
   bindDrop(unzipDropLabel, unzipFileInput, async function(file) {
     if (!file.name.toLowerCase().endsWith('.zip')) {
@@ -1702,6 +1675,7 @@ async function unzipBlob(zipBlob) {
     try {
       var files = await unzipBlob(file);
       unzipFiles = files;
+      currentZipName = file.name;
       renderUnzipList();
       showToast('Распаковано: ' + files.length + ' файлов');
     } catch (e) {
@@ -1711,6 +1685,33 @@ async function unzipBlob(zipBlob) {
 
   function renderUnzipList() {
     unzipFileList.innerHTML = '';
+    
+    if (currentZipName) {
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      var ico = document.createElement('div');
+      ico.className = 'ico';
+      ico.textContent = 'ZIP';
+      box.appendChild(ico);
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = '<div class="name">' + escapeHtml(currentZipName) + '</div>' +
+        '<div class="size">Архив загружен</div>';
+      box.appendChild(meta);
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = 'Удалить';
+      removeBtn.onclick = function() {
+        unzipFiles = [];
+        currentZipName = '';
+        unzipFileList.innerHTML = '';
+        unzipFileInput.value = '';
+        showToast('Архив удалён');
+      };
+      box.appendChild(removeBtn);
+      unzipFileList.appendChild(box);
+    }
+
     unzipFiles.forEach(function(item, index) {
       var box = document.createElement('div');
       box.className = 'file-info';
@@ -1780,6 +1781,16 @@ async function unzipBlob(zipBlob) {
     meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div>' +
       '<div class="size">' + fmtSize(file.size) + '</div>';
     box.appendChild(meta);
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-remove';
+    removeBtn.textContent = 'Удалить';
+    removeBtn.onclick = function() {
+      compressFile = null;
+      compressFileInfo.innerHTML = '';
+      compressOptions.classList.add('hidden');
+      compressFileInput.value = '';
+    };
+    box.appendChild(removeBtn);
     compressFileInfo.appendChild(box);
     compressOptions.classList.remove('hidden');
   });
@@ -1926,4 +1937,4 @@ async function unzipBlob(zipBlob) {
 })();
 </script>
 </body>
-</html>
+  </html>
