@@ -47,7 +47,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
 textarea,input[type=text]{width:100%;padding:14px;background:var(--paper);color:var(--ink);border:1px solid var(--frame);border-radius:2px;font-family:Georgia,serif;font-size:15px;outline:none;resize:vertical;box-shadow:inset 2px 2px 0 rgba(58,44,28,.08);transition:box-shadow .15s}
 textarea{min-height:110px;line-height:1.5}
 textarea:focus,input:focus{box-shadow:inset 2px 2px 0 rgba(58,44,28,.08),0 0 0 2px var(--seal)}
-#b64Output,#b64Input{font-family:'Courier New',monospace;font-size:10.5px;line-height:1.4;min-height:90px;word-break:break-all}
+#b64Output,#b64Input,#svgCodeOut{font-family:'Courier New',monospace;font-size:10.5px;line-height:1.4;min-height:90px;word-break:break-all}
 #b64Input{min-height:120px}
 .file-hidden{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
 .drop{display:block;border:2px dashed var(--frame);border-radius:2px;padding:26px 18px;text-align:center;cursor:pointer;color:var(--ink-soft);font-family:'Courier New',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;background:var(--card);-webkit-user-select:none;user-select:none}
@@ -295,7 +295,7 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
         <div class="section-title">Сжать / Конвертировать фото <span class="hint">выберите формат</span></div>
         <label class="drop" for="compressFileInput" id="compressDropLabel">
           <b>Нажмите</b> или перетащите фото<br>
-          <span class="sub">jpg · png · webp · и т.д.</span>
+          <span class="sub">jpg · png · webp · svg · и т.д.</span>
         </label>
         <input type="file" id="compressFileInput" class="file-hidden" accept="image/*">
         <div id="compressFileInfo"></div>
@@ -308,6 +308,7 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
                 <option value="jpeg">JPEG (фото)</option>
                 <option value="png">PNG (без потерь)</option>
                 <option value="webp">WebP (компактный)</option>
+                <option value="svg">SVG (векторный контейнер)</option>
               </select>
             </div>
             <div class="opt" id="qualityOpt">
@@ -322,6 +323,17 @@ input[type=range]{width:100%;accent-color:var(--seal);margin:8px 0}
               <input type="text" id="compressName" value="image" placeholder="image">
               <span class="dot">.</span>
               <input type="text" id="compressExtDisplay" value="jpg" class="ext-input" readonly>
+            </div>
+          </div>
+
+          <!-- Поле для SVG-кода -->
+          <div id="svgCodeContainer" class="hidden" style="margin-bottom:14px;">
+            <div class="field-row">
+              <div class="lbl">Код SVG</div>
+              <textarea id="svgCodeOut" readonly placeholder="Здесь появится код SVG…"></textarea>
+            </div>
+            <div class="btn-row left">
+              <button class="btn-sm" id="copySvgBtn">Копировать код</button>
             </div>
           </div>
 
@@ -790,8 +802,6 @@ var qrcode = (function(){
 /* ============================================================
    УТИЛИТЫ ДЛЯ РАБОТЫ С АРХИВАМИ
    ============================================================ */
-
-// --- ZIP ---
 var crcTable = new Uint32Array(256);
 for (var i = 0; i < 256; i++) {
   var c = i;
@@ -960,12 +970,12 @@ function createTarHeader(name, size, mtime, typeflag) {
     header.set(bytes.slice(0, length), offset);
   }
   
-  writeOctal(100, 8, 0o644); // mode
-  writeOctal(108, 8, 0); // uid
-  writeOctal(116, 8, 0); // gid
+  writeOctal(100, 8, 0o644);
+  writeOctal(108, 8, 0);
+  writeOctal(116, 8, 0);
   writeOctal(124, 12, size);
   writeOctal(136, 12, mtime);
-  header.set(enc.encode('        '), 148); // checksum placeholder
+  header.set(enc.encode('        '), 148);
   header[156] = typeflag.charCodeAt(0);
   header.set(enc.encode('ustar\0'), 257);
   header.set(enc.encode('00'), 263);
@@ -993,7 +1003,7 @@ async function createTarBlob(files) {
     var padLen = (512 - (f.data.length % 512)) % 512;
     if (padLen > 0) parts.push(new Uint8Array(padLen));
   }
-  parts.push(new Uint8Array(1024)); // end of archive
+  parts.push(new Uint8Array(1024));
   return new Blob(parts, { type: 'application/x-tar' });
 }
 
@@ -1050,6 +1060,7 @@ function detectArchiveFormat(bytes) {
   }
   return 'unknown';
 }
+
 
 /* ============================================================
    UI ЛОГИКА
@@ -1973,12 +1984,46 @@ function detectArchiveFormat(bytes) {
   var qualityRange = document.getElementById('qualityRange');
   var qualityValue = document.getElementById('qualityValue');
   var compressBtn = document.getElementById('compressBtn');
+  var svgCodeContainer = document.getElementById('svgCodeContainer');
+  var svgCodeOut = document.getElementById('svgCodeOut');
+  var copySvgBtn = document.getElementById('copySvgBtn');
   var compressFile = null;
 
   bindDrop(compressDropLabel, compressFileInput, function(file) {
     compressFile = file;
     compressName.value = file.name.replace(/\.[^.]+$/, '') || 'image';
     compressFileInfo.innerHTML = '';
+    
+    // Если загрузили готовый SVG — сразу читаем его код
+    if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+      compressFormat.value = 'svg';
+      compressExtDisplay.value = 'svg';
+      qualityOpt.style.display = 'none';
+      compressOptions.classList.remove('hidden');
+      
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        svgCodeOut.value = e.target.result;
+        svgCodeContainer.classList.remove('hidden');
+        showToast('SVG-код прочитан');
+      };
+      reader.readAsText(file);
+      
+      var box = document.createElement('div');
+      box.className = 'file-info';
+      var ico = document.createElement('div'); ico.className = 'ico'; ico.textContent = 'SVG';
+      box.appendChild(ico);
+      var meta = document.createElement('div'); meta.className = 'meta';
+      meta.innerHTML = '<div class="name">' + escapeHtml(file.name) + '</div><div class="size">' + fmtSize(file.size) + ' (SVG)</div>';
+      box.appendChild(meta);
+      var rm = document.createElement('button'); rm.className = 'btn-remove'; rm.textContent = 'Удалить';
+      rm.onclick = function(){ compressFile = null; compressFileInfo.innerHTML = ''; compressOptions.classList.add('hidden'); svgCodeContainer.classList.add('hidden'); compressFileInput.value = ''; };
+      box.appendChild(rm);
+      compressFileInfo.appendChild(box);
+      return;
+    }
+
+    // Обычная картинка
     var box = document.createElement('div');
     box.className = 'file-info';
     var img = document.createElement('img');
@@ -1996,20 +2041,41 @@ function detectArchiveFormat(bytes) {
       compressFile = null;
       compressFileInfo.innerHTML = '';
       compressOptions.classList.add('hidden');
+      svgCodeContainer.classList.add('hidden');
       compressFileInput.value = '';
     };
     box.appendChild(removeBtn);
     compressFileInfo.appendChild(box);
+    
+    // Сброс формата если был SVG
+    if (compressFormat.value === 'svg') {
+      compressFormat.value = 'jpeg';
+      compressExtDisplay.value = 'jpg';
+      qualityOpt.style.display = 'flex';
+    }
+    
     compressOptions.classList.remove('hidden');
+    svgCodeContainer.classList.add('hidden');
   });
 
   compressFormat.addEventListener('change', function() {
-    qualityOpt.style.display = (this.value === 'png') ? 'none' : 'flex';
-    compressExtDisplay.value = (this.value === 'jpeg') ? 'jpg' : this.value;
+    if (this.value === 'svg') {
+      qualityOpt.style.display = 'none';
+      compressExtDisplay.value = 'svg';
+    } else {
+      qualityOpt.style.display = 'flex';
+      compressExtDisplay.value = (this.value === 'jpeg') ? 'jpg' : this.value;
+    }
+    svgCodeContainer.classList.add('hidden');
   });
 
   qualityRange.addEventListener('input', function() {
     qualityValue.textContent = this.value + '%';
+  });
+
+  copySvgBtn.addEventListener('click', function() {
+    if (!svgCodeOut.value) return;
+    copyText(svgCodeOut.value);
   });
 
   compressBtn.addEventListener('click', function() {
@@ -2017,36 +2083,72 @@ function detectArchiveFormat(bytes) {
     var format = compressFormat.value;
     var quality = parseInt(qualityRange.value, 10) / 100;
     
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      
-      var mime = 'image/' + format;
-      
-      canvas.toBlob(function(blob) {
-        if (!blob) {
-          showToast('Ошибка сжатия');
-          return;
-        }
-        var origSize = compressFile.size;
-        var newSize = blob.size;
-        var diff = ((1 - newSize / origSize) * 100).toFixed(0);
+    var outName = cleanFilename(compressName.value) || 'image';
+    var outExt = compressExtDisplay.value;
+
+    if (format === 'svg') {
+      // Если это уже SVG-файл — просто скачиваем текст
+      if (compressFile.type === 'image/svg+xml' || compressFile.name.toLowerCase().endsWith('.svg')) {
+        var blob = new Blob([svgCodeOut.value], { type: 'image/svg+xml' });
+        downloadBlob(blob, outName + '.svg', 'image/svg+xml');
+        showToast('SVG скачан');
+        return;
+      }
+
+      // Иначе конвертируем фото в SVG-контейнер
+      var img = new Image();
+      img.onload = function() {
+        var c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        var ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
         
-        var outName = cleanFilename(compressName.value) || 'image';
-        var outExt = compressExtDisplay.value;
+        // Используем JPEG base64 для вставки внутрь SVG, чтобы не раздувать
+        var b64 = c.toDataURL('image/jpeg', 0.85);
+        var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" width="' + img.width + '" height="' + img.height + '" viewBox="0 0 ' + img.width + ' ' + img.height + '">\n' +
+                     '  <image href="' + b64 + '" width="' + img.width + '" height="' + img.height + '"/>\n' +
+                     '</svg>';
         
-        downloadBlob(blob, outName + '.' + outExt, mime);
-        showToast('Сжато: ' + fmtSize(origSize) + ' → ' + fmtSize(newSize) + ' (-' + diff + '%)');
-      }, mime, quality);
-    };
-    img.onerror = function() {
-      showToast('Ошибка загрузки фото');
-    };
-    img.src = URL.createObjectURL(compressFile);
+        svgCodeOut.value = svgStr;
+        svgCodeContainer.classList.remove('hidden');
+        
+        var blob = new Blob([svgStr], { type: 'image/svg+xml' });
+        downloadBlob(blob, outName + '.svg', 'image/svg+xml');
+        showToast('Фото сохранено как SVG');
+      };
+      img.onerror = function() { showToast('Ошибка загрузки фото'); };
+      img.src = URL.createObjectURL(compressFile);
+      
+    } else {
+      // JPEG / PNG / WebP
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        var mime = 'image/' + format;
+        
+        canvas.toBlob(function(blob) {
+          if (!blob) {
+            showToast('Ошибка сжатия');
+            return;
+          }
+          var origSize = compressFile.size;
+          var newSize = blob.size;
+          var diff = ((1 - newSize / origSize) * 100).toFixed(0);
+          
+          downloadBlob(blob, outName + '.' + outExt, mime);
+          showToast('Сжато: ' + fmtSize(origSize) + ' → ' + fmtSize(newSize) + ' (-' + diff + '%)');
+        }, mime, quality);
+      };
+      img.onerror = function() {
+        showToast('Ошибка загрузки фото');
+      };
+      img.src = URL.createObjectURL(compressFile);
+    }
   });
 
   /* ===== УТИЛИТЫ ===== */
@@ -2148,4 +2250,4 @@ function detectArchiveFormat(bytes) {
 })();
 </script>
 </body>
-</html>
+  </html>
